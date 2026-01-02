@@ -4,8 +4,8 @@ version = 4
 
 [[package]]
 name = "enigma"
-version = "2.0.1"
-source = "git+https://github.com/GuyOded/enigma-rust-lib.git#b769d3149f5e8642ee9b676ea4848b5bc03c807a"
+version = "2.1.0"
+source = "git+https://github.com/GuyOded/enigma-rust-lib.git#c0dee769d3aa62eedc592fb4810a0ccbb7f8027e"
 dependencies = [
  "phf",
 ]
@@ -121,9 +121,9 @@ checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
 name = "syn"
-version = "2.0.111"
+version = "2.0.112"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "390cc9a294ab71bdb1aa2e99d13be9c753cd2d7bd6560c77118597410c4d2e87"
+checksum = "21f182278bf2d2bcb3c88b1b08a37df029d71ce3d3ae26168e3c653b213b99d4"
 dependencies = [
  "proc-macro2",
  "quote",
