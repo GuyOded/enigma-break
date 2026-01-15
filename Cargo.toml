@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 enigma = { git = "https://github.com/GuyOded/enigma-rust-lib.git", version = "2.1.0" }
+thiserror = "2.0.17"

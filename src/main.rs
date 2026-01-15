@@ -1,6 +1,7 @@
 use enigma::Enigma;
 use enigma::reflectors;
 use enigma::rotor::rotors;
+mod utils;
 
 fn main() {
     let rotor_1 = rotors::create_rotor_1();
@@ -12,11 +13,7 @@ fn main() {
     let reflector_b = reflectors::create_reflector_b();
     let reflector_c = reflectors::create_reflector_c();
 
-    let enigma = Enigma::new(left, mid, right, reflector);
+    // let enigma = Enigma::new(left, mid, right, reflector);
 
     todo!("Break the cipher!")
-}
-
-fn enumerate_n_choose_m<const n: u32, const m: u32>(n: u32, m: u32) -> impl Iterator<Item = &[i32:m]> {
-    todo!()
 }
