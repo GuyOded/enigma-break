@@ -4,41 +4,110 @@ use thiserror::Error;
 pub enum NChooseKError {
     #[error("n must be less than 32")]
     NTooBig,
-    #[error("m must be less than n, (m {m:?}, n {n:?})")]
-    MTooBig { n: u32, m: u32 },
+    #[error("m must be less than n, (k {k:?}, n {n:?})")]
+    KTooBig { n: usize, k: usize },
     #[error("n must be positive")]
     NTooSmall,
     #[error("m must be positive")]
-    MTooSmall,
+    KTooSmall,
 }
 
-pub fn enumerate_n_choose_k<const n: u32, const k: u32>(
-    n: u32,
-    k: u32,
-) -> Result<impl Iterator<Item = [u32; k]>, NChooseKError> {
-    match (k, n) {
-        (_, n) if k > 32 => Err(NChooseKError::NTooBig),
-        (m, n) if m > n => Err(NChooseKError::MTooBig { n, m }),
-        (_, n) if n <= 0 => Err(NChooseKError::NTooSmall),
-        (m, n) if m <= 0 => Err(NChooseKError::MTooSmall),
-        _ => Ok(()),
-    }?;
+pub fn enumerate_n_choose_k<const N: usize, const K: usize>()
+-> Result<impl Iterator<Item = [u8; K]>, NChooseKError> {
+    if N > usize::BITS.try_into().unwrap() {
+        return Err(NChooseKError::NTooBig);
+    }
+    if K > N {
+        return Err(NChooseKError::KTooBig { n: N, k: K });
+    }
+    if N <= 0 {
+        return Err(NChooseKError::NTooSmall);
+    }
+    if K <= 0 {
+        return Err(NChooseKError::KTooSmall);
+    }
+
+    let last_permutation: usize = ((1 << K) - 1) << N - K;
+    let first_permutation: usize = (1 << K) - 1;
+
+    let mut current_permutation = first_permutation;
+    let mut last_element_reached = false;
+    Ok(std::iter::from_fn(move || {
+        if current_permutation == last_permutation {
+            if last_element_reached {
+                None
+            } else {
+                last_element_reached = true;
+                Some(positions_of_bits::<N, K>(last_permutation))
+            }
+        } else {
+            let next = positions_of_bits::<N, K>(current_permutation);
+            current_permutation = gospers_hack(current_permutation);
+            Some(next)
+        }
+    }))
 }
 
-fn gospers_hack(x: u32) -> u32 {
+enum PermutationsError {
+    ElementIsBiggest,
+    ElementNotFound,
+}
+
+struct Permutations<const K: usize> {
+    initial_state: [u8; K],
+    current_permutation: [u8; K],
+}
+
+impl<const K: usize> Permutations<K> {
+    fn new(array: [u8; K]) -> Permutations<K> {
+        let mut array = array.clone();
+        array.sort();
+        Self {
+            initial_state: array,
+            current_permutation: array.clone(),
+        }
+    }
+
+    fn find_next_bigger_neighbor(&self, number: u8) -> Result<&u8, PermutationsError> {
+        let result = self.current_permutation.binary_search(&number);
+        let Ok(i) = result else {
+            return Err(PermutationsError::ElementNotFound);
+        };
+
+        self.initial_state
+            .get(i)
+            .ok_or(PermutationsError::ElementIsBiggest)
+    }
+}
+
+fn gospers_hack(x: usize) -> usize {
     let c = x & x.wrapping_neg();
     let r = x + c;
     (((r ^ x) >> 2) / c) | r
 }
 
+fn positions_of_bits<const N: usize, const K: usize>(number: usize) -> [u8; K] {
+    let mut result: [u8; K] = [0; K];
+    let mut position = 0;
+
+    for i in 0..N {
+        if number & (1 << i) != 0 {
+            result[position] = (i + 1).try_into().unwrap();
+            position += 1;
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
-mod tests {
+mod test_gospers_hack {
     use super::*;
 
     #[test]
-    fn gosper_test_with_1() {
-        let k: u32 = 1;
-        let result: Vec<u32> = (1..=11)
+    fn test_gospers_hack_with_1() {
+        let k: usize = 1;
+        let result: Vec<usize> = (1..=11)
             .scan(k, |acc, _| {
                 let val = *acc;
                 *acc = gospers_hack(*acc);
@@ -48,4 +117,9 @@ mod tests {
 
         assert_eq!(result, [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024])
     }
+}
+
+#[cfg(test)]
+mod test_permutations {
+
 }
