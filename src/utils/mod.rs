@@ -1,4 +1,5 @@
 use thiserror::Error;
+mod permutations;
 
 #[derive(Error, Debug)]
 pub enum NChooseKError {
@@ -48,37 +49,7 @@ pub fn enumerate_n_choose_k<const N: usize, const K: usize>()
     }))
 }
 
-enum PermutationsError {
-    ElementIsBiggest,
-    ElementNotFound,
-}
 
-struct Permutations<const K: usize> {
-    initial_state: [u8; K],
-    current_permutation: [u8; K],
-}
-
-impl<const K: usize> Permutations<K> {
-    fn new(array: [u8; K]) -> Permutations<K> {
-        let mut array = array.clone();
-        array.sort();
-        Self {
-            initial_state: array,
-            current_permutation: array.clone(),
-        }
-    }
-
-    fn find_next_bigger_neighbor(&self, number: u8) -> Result<&u8, PermutationsError> {
-        let result = self.current_permutation.binary_search(&number);
-        let Ok(i) = result else {
-            return Err(PermutationsError::ElementNotFound);
-        };
-
-        self.initial_state
-            .get(i)
-            .ok_or(PermutationsError::ElementIsBiggest)
-    }
-}
 
 fn gospers_hack(x: usize) -> usize {
     let c = x & x.wrapping_neg();
@@ -119,7 +90,3 @@ mod test_gospers_hack {
     }
 }
 
-#[cfg(test)]
-mod test_permutations {
-
-}
