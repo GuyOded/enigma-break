@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-enigma = { git = "https://github.com/GuyOded/enigma-rust-lib.git", version = "2.1.0" }
+colog = "1.4.0"
+enigma = { git = "https://github.com/GuyOded/enigma-rust-lib.git", version = "3.0.0" }
+itertools = "0.14.0"
+log = "0.4.29"
 thiserror = "2.0.17"
