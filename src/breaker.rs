@@ -9,8 +9,8 @@ use itertools;
 use log::debug;
 
 const ALPHABET_SIZE: u8 = 26;
-const FIRST_LETTER: char = 'A';
-const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
+// const FIRST_LETTER: char = 'A';
+// const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
 
 pub struct EnigmaBreaker {
     five_choose_three_combinations: [[usize; 3]; 1],
@@ -139,6 +139,7 @@ impl EnigmaBreaker {
     ) -> Vec<(EnigmaRotorConfiguration, [char; 26])> {
         let mut max_aligned_letters: usize = 0;
         let mut best_transpositions_candidate;
+        let mut second_char;
         let mut config_candidate: Option<EnigmaRotorConfiguration>;
 
         for permutation in self.three_permutations {
@@ -159,12 +160,15 @@ impl EnigmaBreaker {
                     debug!("Testing current config: {currently_tested_config:#?}");
                 }
 
-                let (possible_transpositions, aligned_letters) =
-                    EnigmaBreaker::build_possible_transpositions(
+                let (possible_transpositions, second, aligned_letters) =
+                    EnigmaBreaker::build_possible_transposition(
                         cipher,
                         plain,
                         &currently_tested_config,
                         reflector,
+                        'A',
+                        'B',
+                        'C',
                     );
 
                 if max_aligned_letters >= aligned_letters {
@@ -173,110 +177,100 @@ impl EnigmaBreaker {
 
                 max_aligned_letters = aligned_letters;
                 best_transpositions_candidate = possible_transpositions;
+                second_char = second;
                 config_candidate = Some(currently_tested_config);
-
                 debug!(
-                    "Found possible configuration {config_candidate:#?}
-                    \nTranspositions {best_transpositions_candidate:#?} with {max_aligned_letters} aligned letters
-                    \nMax Aligned Letters: {max_aligned_letters}"
-                );
+                        "Found possible configuration {config_candidate:#?}
+                        \nTranspositions {best_transpositions_candidate:#?}, {second_char} with {max_aligned_letters} aligned letters
+                        \nMax Aligned Letters: {max_aligned_letters}"
+                    );
             }
         }
 
         Vec::new()
     }
 
-    fn build_possible_transpositions(
+    fn build_possible_transposition(
         original_cipher: &str,
         plain: &str,
         enigma_rotor_configuration: &EnigmaRotorConfiguration,
         reflector: &Reflector,
-    ) -> (HashMap<char, char>, usize) {
-        let mut transpositions: HashMap<char, char> = HashMap::new();
-        let mut enigma = enigma_rotor_configuration.to_enigma(*reflector);
+        first_letter_to_transpose: char,
+        second_letter_to_transpose: char,
+        third_letter_to_transpose: char,
+    ) -> (char, char, usize) {
         let mut max_aligned_letters = 0;
-        let cipher_candidate = enigma.encrypt_str(plain).unwrap();
+        let mut first_char_corresponding_to_max_aligned_letters = 'A';
+        let mut second_char_corresponding_to_max_aligned_letters = 'A';
+        let mut third_char_corresponding_to_max_aligned_letters = 'A';
+        let mut enigma = enigma_rotor_configuration.to_enigma(*reflector);
+        for letter in 'A'..='Z' {
+            for second_transposition_letter in 'A'..='Z' {
+                for third_transposition_letter in 'A'..='Z' {
+                    enigma.set_transposition(first_letter_to_transpose, letter);
+                    if second_letter_to_transpose == letter
+                        && first_letter_to_transpose == second_transposition_letter
+                    {
+                        continue;
+                    }
 
-        for (cipher_candidate_char, original_cipher_char) in
-            cipher_candidate.chars().zip(original_cipher.chars())
-        {
-            if transpositions
-                .get(&cipher_candidate_char)
-                .map_or(false, |&c| c != original_cipher_char)
-                || transpositions
-                    .get(&original_cipher_char)
-                    .map_or(false, |&o| o != cipher_candidate_char)
-          .un  {
-                EnigmaBreaker::set_enigma_state_by_transpositions_and_rotor_config(
-                    &mut enigma,
-                    enigma_rotor_configuration,
-                    &transpositions,
-                );
-
-                let aligned_letters = EnigmaBreaker::count_aligned_letters(
                     enigma
-                        .encrypt_str_iter(&original_cipher[..plain.len()])
-                        .map(|c| c.unwrap()),
-                    plain,
-                );
+                        .set_transposition(second_letter_to_transpose, second_transposition_letter);
+                    enigma.set_transposition(third_letter_to_transpose, third_transposition_letter);
 
-                if aligned_letters > max_aligned_letters
-                    && original_cipher_char != cipher_candidate_char
-                {
-                    transpositions.insert(original_cipher_char, cipher_candidate_char);
-                    transpositions.insert(cipher_candidate_char, original_cipher_char);
-                    max_aligned_letters = aligned_letters;
+                    let aligned_letters = EnigmaBreaker::count_aligned_letters(
+                        enigma.encrypt_str_iter(plain).map(|r| r.unwrap()),
+                        original_cipher,
+                    );
+
+                    if aligned_letters > max_aligned_letters {
+                        max_aligned_letters = aligned_letters;
+                        first_char_corresponding_to_max_aligned_letters = letter;
+                        second_char_corresponding_to_max_aligned_letters =
+                            second_transposition_letter;
+                        third_char_corresponding_to_max_aligned_letters =
+                            third_transposition_letter;
+                    }
+
+                    EnigmaBreaker::set_enigma_state_by_transpositions_and_rotor_config(
+                        &mut enigma,
+                        enigma_rotor_configuration,
+                        None,
+                    );
                 }
-
-                continue;
-            }
-
-            if original_cipher_char == cipher_candidate_char {
-                continue;
-            }
-
-            transpositions.insert(original_cipher_char, cipher_candidate_char);
-            transpositions.insert(cipher_candidate_char, original_cipher_char);
-            EnigmaBreaker::set_enigma_state_by_transpositions_and_rotor_config(
-                &mut enigma,
-                enigma_rotor_configuration,
-                &transpositions,
-            );
-
-            let aligned_letters = EnigmaBreaker::count_aligned_letters(
-                enigma
-                    .encrypt_str_iter(&original_cipher[..plain.len()])
-                    .map(|c| c.unwrap()),
-                plain,
-            );
-
-            if aligned_letters <= max_aligned_letters {
-                transpositions.remove(&original_cipher_char);
-                transpositions.remove(&cipher_candidate_char);
-                continue;
-            }
-
-            max_aligned_letters = aligned_letters;
-            if aligned_letters > 280 {
-                debug!("Ahhhhhhhhhhhh! {transpositions:#?}");
-                debug!("Aligned letters: {aligned_letters}, Max Aligned: {max_aligned_letters}");
             }
         }
-        (transpositions, max_aligned_letters)
+
+        debug!(
+            "{:?}",
+            (
+                first_char_corresponding_to_max_aligned_letters,
+                second_char_corresponding_to_max_aligned_letters,
+                third_char_corresponding_to_max_aligned_letters,
+                max_aligned_letters
+            )
+        );
+        (
+            first_char_corresponding_to_max_aligned_letters,
+            second_char_corresponding_to_max_aligned_letters,
+            max_aligned_letters,
+        )
     }
 
     fn set_enigma_state_by_transpositions_and_rotor_config(
         enigma: &mut Enigma,
         rotor_config: &EnigmaRotorConfiguration,
-        transpositions: &HashMap<char, char>,
+        transpositions: Option<&HashMap<char, char>>,
     ) {
         enigma.set_left_rotor_position_from_int(rotor_config.left_rotor_position);
         enigma.set_right_rotor_position_from_int(rotor_config.right_rotor_position);
         enigma.set_middle_rotor_position_from_int(rotor_config.middle_rotor_position);
         enigma.clear_transpositions();
 
-        transpositions.iter().for_each(|(&key, &value)| {
-            enigma.set_transposition(key, value);
+        transpositions.map(|map| {
+            map.iter().for_each(|(&key, &value)| {
+                enigma.set_transposition(key, value);
+            });
         });
     }
 
