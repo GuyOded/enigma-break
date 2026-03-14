@@ -1,0 +1,35 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Debug executable 'enigma_break'",
+            "type": "lldb",
+            "request": "launch",
+            "env": {
+                "RUST_LOG": "DEBUG"
+            },
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=enigma_break"
+                ]
+            },
+            "args": []
+        },
+        {
+            "name": "Debug unit tests in executable 'enigma_break'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--bin=enigma_break"
+                ]
+            }
+        }
+    ]
+}
