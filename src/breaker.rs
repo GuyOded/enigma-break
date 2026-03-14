@@ -8,16 +8,17 @@ use enigma::rotor::Rotor;
 use enigma::rotor::rotors;
 use itertools;
 use log::debug;
+use log::trace;
 
 const ALPHABET_SIZE: u8 = 26;
 const FIRST_LETTER: char = 'A';
 const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
 
 pub struct EnigmaBreaker<'a> {
-    five_choose_three_combinations: [[usize; 3]; 1],
-    three_permutations: [[usize; 3]; 1],
+    five_choose_three_combinations: [[usize; 3]; 10],
+    three_permutations: [[usize; 3]; 6],
     available_rotors: [Rotor; 5],
-    available_reflectors: [Reflector; 1],
+    available_reflectors: [Reflector; 3],
     cipher: &'a str,
     plain: &'a str,
     cipher_metadata: CipherMetadata,
@@ -28,7 +29,7 @@ struct CipherMetadata {
     letter_frequency_order: Vec<(char, u32)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct EnigmaRotorConfiguration {
     left_rotor_index: usize,
     middle_rotor_index: usize,
@@ -83,30 +84,6 @@ impl EnigmaRotorConfiguration {
             right_rotor_position,
         }
     }
-
-    fn to_enigma(&self, reflector: Reflector) -> Enigma {
-        let mut left_rotor = Self::rotor_index_to_rotor(self.left_rotor_index);
-        left_rotor.set_position_from_int(self.left_rotor_position);
-
-        let mut middle_rotor = Self::rotor_index_to_rotor(self.middle_rotor_index);
-        middle_rotor.set_position_from_int(self.middle_rotor_position);
-
-        let mut right_rotor = Self::rotor_index_to_rotor(self.right_rotor_index);
-        right_rotor.set_position_from_int(self.right_rotor_position);
-
-        Enigma::new(left_rotor, middle_rotor, right_rotor, reflector)
-    }
-
-    fn rotor_index_to_rotor(index: usize) -> Rotor {
-        match index {
-            0 => rotors::create_rotor_1(),
-            1 => rotors::create_rotor_2(),
-            2 => rotors::create_rotor_3(),
-            3 => rotors::create_rotor_4(),
-            4 => rotors::create_rotor_5(),
-            _ => panic!("Rotor index out of range, index={index}"),
-        }
-    }
 }
 
 impl<'a> EnigmaBreaker<'a> {
@@ -122,9 +99,27 @@ impl<'a> EnigmaBreaker<'a> {
         let rotor_5 = rotors::create_rotor_5();
 
         Self {
-            five_choose_three_combinations: [[0, 1, 2]],
-            three_permutations: [[1, 0, 2]],
-            available_reflectors: [reflector_b],
+            five_choose_three_combinations: [
+                [0, 1, 2],
+                [0, 1, 3],
+                [0, 1, 4],
+                [0, 2, 3],
+                [0, 2, 4],
+                [0, 3, 4],
+                [1, 2, 3],
+                [1, 2, 4],
+                [1, 3, 4],
+                [2, 3, 4],
+            ],
+            three_permutations: [
+                [0, 1, 2],
+                [0, 2, 1],
+                [1, 0, 2],
+                [1, 2, 0],
+                [2, 0, 1],
+                [2, 1, 0],
+            ],
+            available_reflectors: [reflector_a, reflector_b, reflector_c],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
             cipher,
             plain,
@@ -132,21 +127,27 @@ impl<'a> EnigmaBreaker<'a> {
         }
     }
 
-    pub fn known_plain_text_cipher_break(&self, cipher: &str, plain: &str) -> String {
+    pub fn known_plain_text_cipher_break(&self) {
         for reflector in self.available_reflectors {
             for combination in self.five_choose_three_combinations {
-                self.find_enigma_configuration(&combination, &reflector);
+                if let Some((enigma_config, transpositions)) =
+                    self.find_enigma_configuration(&combination, &reflector)
+                {
+                    println!(
+                        "{:#?}, transpositions: {:#?}, reflector: {}",
+                        enigma_config, transpositions, reflector.name
+                    );
+                    return;
+                }
             }
         }
-
-        "".to_string()
     }
 
     fn find_enigma_configuration(
         &self,
         combination: &[usize; 3],
         reflector: &Reflector,
-    ) -> Vec<(EnigmaRotorConfiguration, [char; 26])> {
+    ) -> Option<(EnigmaRotorConfiguration, HashMap<char, char>)> {
         let mut enigma: Enigma;
 
         for permutation in self.three_permutations {
@@ -165,20 +166,28 @@ impl<'a> EnigmaBreaker<'a> {
                     combination[permutation[0]],
                     combination[permutation[1]],
                     combination[permutation[2]],
-                    1,
-                    5,
-                    17,
+                    left_pos,
+                    mid_pos,
+                    right_pos,
                 );
 
-                let _ = self.try_building_transpositions(&mut enigma, &currently_tested_config);
+                let transpositions =
+                    self.try_building_transpositions(&mut enigma, &currently_tested_config);
 
-                if i % 1000 == 0 {
-                    debug!("Testing current config: {currently_tested_config:#?}");
+                if let Some(transpositions) = transpositions {
+                    return Some((currently_tested_config, transpositions));
+                }
+
+                if i % 2000 == 0 {
+                    debug!(
+                        "Testing current config: {currently_tested_config:#?}, reflector: {}",
+                        reflector.name
+                    );
                 }
             }
         }
 
-        Vec::new()
+        None
     }
 
     fn try_building_transpositions<'b>(
@@ -188,8 +197,9 @@ impl<'a> EnigmaBreaker<'a> {
     ) -> Option<HashMap<char, char>> {
         let currently_tested_char = self.cipher_metadata.letter_frequency_order[0].0;
 
-        for transposition_candidate in ['H'] {
-            debug!("Trying {currently_tested_char} <---> {transposition_candidate}");
+        for transposition_candidate in FIRST_LETTER..'Z' {
+            trace!("Trying {currently_tested_char} <---> {transposition_candidate}");
+
             enigma.set_left_rotor_position_from_int(enigma_rotor_configuration.left_rotor_position);
             enigma.set_middle_rotor_position_from_int(
                 enigma_rotor_configuration.middle_rotor_position,
@@ -229,7 +239,7 @@ impl<'a> EnigmaBreaker<'a> {
                         || enigma.get_transpositions().contains_key(&cipher_char)),
                 ) {
                     (true, true) => {
-                        debug!(
+                        trace!(
                             "d={untransposed_result}, c={cipher_char}, i={i}, {:#?}",
                             enigma.get_transpositions()
                         );
@@ -244,30 +254,6 @@ impl<'a> EnigmaBreaker<'a> {
         }
 
         Some(enigma.get_transpositions())
-    }
-
-    fn set_enigma_state_by_transpositions_and_rotor_config(
-        enigma: &mut Enigma,
-        rotor_config: &EnigmaRotorConfiguration,
-        transpositions: Option<&HashMap<char, char>>,
-    ) {
-        enigma.set_left_rotor_position_from_int(rotor_config.left_rotor_position);
-        enigma.set_right_rotor_position_from_int(rotor_config.right_rotor_position);
-        enigma.set_middle_rotor_position_from_int(rotor_config.middle_rotor_position);
-        enigma.clear_transpositions();
-
-        transpositions.map(|map| {
-            map.iter().for_each(|(&key, &value)| {
-                enigma.set_transposition(key, value);
-            });
-        });
-    }
-
-    fn count_aligned_letters(plain_candidate: impl Iterator<Item = char>, plain: &str) -> usize {
-        plain_candidate
-            .zip(plain.chars())
-            .filter(|&(deciphered, plain)| deciphered == plain.to_ascii_uppercase())
-            .count()
     }
 
     fn build_cipher_metadata(plain: &str) -> CipherMetadata {
