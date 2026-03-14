@@ -95,8 +95,8 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "enigma"
-version = "3.2.0"
-source = "git+https://github.com/GuyOded/enigma-rust-lib.git#fea7f981d34e10dc9fe1315f86bfd6db9e31e98e"
+version = "3.3.0"
+source = "git+https://github.com/GuyOded/enigma-rust-lib.git#dc81497a22760e932107057c4c5a40025797301a"
 dependencies = [
  "phf",
 ]

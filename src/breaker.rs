@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::HashMap;
 
 use enigma::Enigma;
@@ -9,14 +10,22 @@ use itertools;
 use log::debug;
 
 const ALPHABET_SIZE: u8 = 26;
-// const FIRST_LETTER: char = 'A';
-// const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
+const FIRST_LETTER: char = 'A';
+const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
 
-pub struct EnigmaBreaker {
+pub struct EnigmaBreaker<'a> {
     five_choose_three_combinations: [[usize; 3]; 1],
     three_permutations: [[usize; 3]; 1],
     available_rotors: [Rotor; 5],
     available_reflectors: [Reflector; 1],
+    cipher: &'a str,
+    plain: &'a str,
+    cipher_metadata: CipherMetadata,
+}
+
+#[derive(Debug)]
+struct CipherMetadata {
+    letter_frequency_order: Vec<(char, u32)>,
 }
 
 #[derive(Debug)]
@@ -100,8 +109,8 @@ impl EnigmaRotorConfiguration {
     }
 }
 
-impl EnigmaBreaker {
-    pub fn new() -> Self {
+impl<'a> EnigmaBreaker<'a> {
+    pub fn new(cipher: &'a str, plain: &'a str) -> Self {
         let reflector_a = reflectors::create_reflector_a();
         let reflector_b = reflectors::create_reflector_b();
         let reflector_c = reflectors::create_reflector_c();
@@ -117,36 +126,41 @@ impl EnigmaBreaker {
             three_permutations: [[1, 0, 2]],
             available_reflectors: [reflector_b],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
+            cipher,
+            plain,
+            cipher_metadata: EnigmaBreaker::build_cipher_metadata(plain),
         }
     }
 
     pub fn known_plain_text_cipher_break(&self, cipher: &str, plain: &str) -> String {
         for reflector in self.available_reflectors {
             for combination in self.five_choose_three_combinations {
-                self.find_rotors_configuration_candidates(&combination, &cipher, plain, &reflector);
+                self.find_enigma_configuration(&combination, &cipher, plain, &reflector);
             }
         }
 
         "".to_string()
     }
 
-    fn find_rotors_configuration_candidates(
+    fn find_enigma_configuration(
         &self,
         combination: &[usize; 3],
-        cipher: &str,
-        plain: &str,
         reflector: &Reflector,
     ) -> Vec<(EnigmaRotorConfiguration, [char; 26])> {
-        let mut max_aligned_letters: usize = 0;
-        let mut best_transpositions_candidate;
-        let mut second_char;
-        let mut config_candidate: Option<EnigmaRotorConfiguration>;
+        let mut enigma: Enigma;
 
         for permutation in self.three_permutations {
             for (i, (left_pos, mid_pos, right_pos)) in
                 itertools::iproduct!(0..ALPHABET_SIZE, 0..ALPHABET_SIZE, 0..ALPHABET_SIZE)
                     .enumerate()
             {
+                enigma = Enigma::new(
+                    self.available_rotors[0].clone(),
+                    self.available_rotors[1].clone(),
+                    self.available_rotors[2].clone(),
+                    *reflector,
+                );
+
                 let currently_tested_config = EnigmaRotorConfiguration::new(
                     combination[permutation[0]],
                     combination[permutation[1]],
@@ -159,102 +173,68 @@ impl EnigmaBreaker {
                 if i % 1000 == 0 {
                     debug!("Testing current config: {currently_tested_config:#?}");
                 }
-
-                let (possible_transpositions, second, aligned_letters) =
-                    EnigmaBreaker::build_possible_transposition(
-                        cipher,
-                        plain,
-                        &currently_tested_config,
-                        reflector,
-                        'A',
-                        'B',
-                        'C',
-                    );
-
-                if max_aligned_letters >= aligned_letters {
-                    continue;
-                }
-
-                max_aligned_letters = aligned_letters;
-                best_transpositions_candidate = possible_transpositions;
-                second_char = second;
-                config_candidate = Some(currently_tested_config);
-                debug!(
-                        "Found possible configuration {config_candidate:#?}
-                        \nTranspositions {best_transpositions_candidate:#?}, {second_char} with {max_aligned_letters} aligned letters
-                        \nMax Aligned Letters: {max_aligned_letters}"
-                    );
             }
         }
 
         Vec::new()
     }
 
-    fn build_possible_transposition(
-        original_cipher: &str,
-        plain: &str,
+    fn try_building_transpositions<'b>(
+        &self,
+        enigma: &mut Enigma,
         enigma_rotor_configuration: &EnigmaRotorConfiguration,
-        reflector: &Reflector,
-        first_letter_to_transpose: char,
-        second_letter_to_transpose: char,
-        third_letter_to_transpose: char,
-    ) -> (char, char, usize) {
-        let mut max_aligned_letters = 0;
-        let mut first_char_corresponding_to_max_aligned_letters = 'A';
-        let mut second_char_corresponding_to_max_aligned_letters = 'A';
-        let mut third_char_corresponding_to_max_aligned_letters = 'A';
-        let mut enigma = enigma_rotor_configuration.to_enigma(*reflector);
-        for letter in 'A'..='Z' {
-            for second_transposition_letter in 'A'..='Z' {
-                for third_transposition_letter in 'A'..='Z' {
-                    enigma.set_transposition(first_letter_to_transpose, letter);
-                    if second_letter_to_transpose == letter
-                        && first_letter_to_transpose == second_transposition_letter
-                    {
-                        continue;
-                    }
+    ) -> Option<HashMap<char, char>> {
+        let currently_tested_char = self.cipher_metadata.letter_frequency_order[0].0;
 
-                    enigma
-                        .set_transposition(second_letter_to_transpose, second_transposition_letter);
-                    enigma.set_transposition(third_letter_to_transpose, third_transposition_letter);
+        for transposition_candidate in FIRST_LETTER..='Z' {
+            enigma.set_left_rotor_position_from_int(enigma_rotor_configuration.left_rotor_position);
+            enigma.set_middle_rotor_position_from_int(
+                enigma_rotor_configuration.middle_rotor_position,
+            );
+            enigma
+                .set_right_rotor_position_from_int(enigma_rotor_configuration.right_rotor_position);
+            enigma.set_transposition(currently_tested_char, transposition_candidate);
 
-                    let aligned_letters = EnigmaBreaker::count_aligned_letters(
-                        enigma.encrypt_str_iter(plain).map(|r| r.unwrap()),
-                        original_cipher,
-                    );
-
-                    if aligned_letters > max_aligned_letters {
-                        max_aligned_letters = aligned_letters;
-                        first_char_corresponding_to_max_aligned_letters = letter;
-                        second_char_corresponding_to_max_aligned_letters =
-                            second_transposition_letter;
-                        third_char_corresponding_to_max_aligned_letters =
-                            third_transposition_letter;
-                    }
-
-                    EnigmaBreaker::set_enigma_state_by_transpositions_and_rotor_config(
-                        &mut enigma,
-                        enigma_rotor_configuration,
-                        None,
-                    );
-                }
+            if let Some(transpositions) =
+                self.build_potential_transposition_for_target_letter(enigma, currently_tested_char)
+            {
+                return Some(transpositions.clone());
             }
+
+            enigma.clear_transpositions();
         }
 
-        debug!(
-            "{:?}",
-            (
-                first_char_corresponding_to_max_aligned_letters,
-                second_char_corresponding_to_max_aligned_letters,
-                third_char_corresponding_to_max_aligned_letters,
-                max_aligned_letters
-            )
-        );
-        (
-            first_char_corresponding_to_max_aligned_letters,
-            second_char_corresponding_to_max_aligned_letters,
-            max_aligned_letters,
-        )
+        None
+    }
+
+    fn build_potential_transposition_for_target_letter<'b>(
+        &self,
+        enigma: &'b mut Enigma,
+        target_letter: char,
+    ) -> Option<&'b HashMap<char, char>> {
+        for (i, c) in self.plain.char_indices() {
+            if c == target_letter {
+                let untransposed_result = enigma.encrypt_char(c).unwrap();
+                let cipher_char = self.cipher.chars().nth(i).unwrap();
+
+                match (
+                    untransposed_result != cipher_char,
+                    (enigma
+                        .get_transpositions()
+                        .contains_key(&untransposed_result)
+                        || enigma.get_transpositions().contains_key(&cipher_char)),
+                ) {
+                    (true, true) => (),
+                    (true, false) => (),
+                    (false, true) => return None,
+                    (false, false) => enigma.set_transposition(untransposed_result, cipher_char),
+                }
+                continue;
+            }
+            let _ = enigma.encrypt_char(c);
+        }
+
+        Some(enigma.get_transpositions())
     }
 
     fn set_enigma_state_by_transpositions_and_rotor_config(
@@ -279,5 +259,27 @@ impl EnigmaBreaker {
             .zip(plain.chars())
             .filter(|&(deciphered, plain)| deciphered == plain.to_ascii_uppercase())
             .count()
+    }
+
+    fn build_cipher_metadata(plain: &str) -> CipherMetadata {
+        let mut letter_frequencies: [u32; ALPHABET_SIZE as usize] = [0; ALPHABET_SIZE as usize];
+        let mut letter_frequency_order: Vec<(char, u32)> = Vec::new();
+        plain.to_ascii_uppercase().chars().for_each(|c| {
+            letter_frequencies[(c as u8) as usize - FIRST_LETTER_ASCII_INDEX] += 1;
+        });
+
+        letter_frequencies
+            .iter()
+            .enumerate()
+            .for_each(|(i, &freq)| {
+                letter_frequency_order
+                    .push(((i as u8 + FIRST_LETTER_ASCII_INDEX as u8) as char, freq));
+            });
+
+        letter_frequency_order.sort_by_key(|&(_, freq)| Reverse(freq));
+
+        CipherMetadata {
+            letter_frequency_order,
+        }
     }
 }
