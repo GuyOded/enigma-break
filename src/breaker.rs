@@ -135,7 +135,7 @@ impl<'a> EnigmaBreaker<'a> {
     pub fn known_plain_text_cipher_break(&self, cipher: &str, plain: &str) -> String {
         for reflector in self.available_reflectors {
             for combination in self.five_choose_three_combinations {
-                self.find_enigma_configuration(&combination, &cipher, plain, &reflector);
+                self.find_enigma_configuration(&combination, &reflector);
             }
         }
 
@@ -155,9 +155,9 @@ impl<'a> EnigmaBreaker<'a> {
                     .enumerate()
             {
                 enigma = Enigma::new(
-                    self.available_rotors[0].clone(),
-                    self.available_rotors[1].clone(),
-                    self.available_rotors[2].clone(),
+                    self.available_rotors[combination[permutation[0]]].clone(),
+                    self.available_rotors[combination[permutation[1]]].clone(),
+                    self.available_rotors[combination[permutation[2]]].clone(),
                     *reflector,
                 );
 
@@ -169,6 +169,8 @@ impl<'a> EnigmaBreaker<'a> {
                     5,
                     17,
                 );
+
+                let _ = self.try_building_transpositions(&mut enigma, &currently_tested_config);
 
                 if i % 1000 == 0 {
                     debug!("Testing current config: {currently_tested_config:#?}");
@@ -186,7 +188,8 @@ impl<'a> EnigmaBreaker<'a> {
     ) -> Option<HashMap<char, char>> {
         let currently_tested_char = self.cipher_metadata.letter_frequency_order[0].0;
 
-        for transposition_candidate in FIRST_LETTER..='Z' {
+        for transposition_candidate in ['H'] {
+            debug!("Trying {currently_tested_char} <---> {transposition_candidate}");
             enigma.set_left_rotor_position_from_int(enigma_rotor_configuration.left_rotor_position);
             enigma.set_middle_rotor_position_from_int(
                 enigma_rotor_configuration.middle_rotor_position,
@@ -198,6 +201,7 @@ impl<'a> EnigmaBreaker<'a> {
             if let Some(transpositions) =
                 self.build_potential_transposition_for_target_letter(enigma, currently_tested_char)
             {
+                debug!("Found transposition possibility: {transpositions:#?}");
                 return Some(transpositions.clone());
             }
 
@@ -212,7 +216,7 @@ impl<'a> EnigmaBreaker<'a> {
         enigma: &'b mut Enigma,
         target_letter: char,
     ) -> Option<&'b HashMap<char, char>> {
-        for (i, c) in self.plain.char_indices() {
+        for (i, c) in self.plain.to_ascii_uppercase().char_indices() {
             if c == target_letter {
                 let untransposed_result = enigma.encrypt_char(c).unwrap();
                 let cipher_char = self.cipher.chars().nth(i).unwrap();
@@ -224,10 +228,15 @@ impl<'a> EnigmaBreaker<'a> {
                         .contains_key(&untransposed_result)
                         || enigma.get_transpositions().contains_key(&cipher_char)),
                 ) {
-                    (true, true) => (),
-                    (true, false) => (),
-                    (false, true) => return None,
-                    (false, false) => enigma.set_transposition(untransposed_result, cipher_char),
+                    (true, true) => {
+                        debug!(
+                            "d={untransposed_result}, c={cipher_char}, i={i}, {:#?}",
+                            enigma.get_transpositions()
+                        );
+                        return None;
+                    }
+                    (true, false) => enigma.set_transposition(untransposed_result, cipher_char),
+                    (false, _) => (),
                 }
                 continue;
             }
