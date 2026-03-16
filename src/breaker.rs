@@ -14,7 +14,7 @@ const ALPHABET_SIZE: u8 = 26;
 const FIRST_LETTER: char = 'A';
 const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
 
-pub struct EnigmaBreaker<'a> {
+pub struct EnigmaSolver<'a> {
     five_choose_three_combinations: [[usize; 3]; 10],
     three_permutations: [[usize; 3]; 6],
     available_rotors: [Rotor; 5],
@@ -86,7 +86,7 @@ impl EnigmaRotorConfiguration {
     }
 }
 
-impl<'a> EnigmaBreaker<'a> {
+impl<'a> EnigmaSolver<'a> {
     pub fn new(cipher: &'a str, plain: &'a str) -> Self {
         let reflector_a = reflectors::create_reflector_a();
         let reflector_b = reflectors::create_reflector_b();
@@ -123,13 +123,13 @@ impl<'a> EnigmaBreaker<'a> {
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
             cipher,
             plain,
-            cipher_metadata: EnigmaBreaker::build_cipher_metadata(plain),
+            cipher_metadata: EnigmaSolver::build_cipher_metadata(plain),
         }
     }
 
     pub fn known_plain_text_cipher_break(&self) {
-        for reflector in self.available_reflectors {
-            for combination in self.five_choose_three_combinations {
+        for reflector in self.available_reflectors.iter() {
+            for combination in self.five_choose_three_combinations.iter() {
                 if let Some((enigma_config, transpositions)) =
                     self.find_enigma_configuration(&combination, &reflector)
                 {
@@ -150,7 +150,7 @@ impl<'a> EnigmaBreaker<'a> {
     ) -> Option<(EnigmaRotorConfiguration, HashMap<char, char>)> {
         let mut enigma: Enigma;
 
-        for permutation in self.three_permutations {
+        for permutation in self.three_permutations.iter() {
             for (i, (left_pos, mid_pos, right_pos)) in
                 itertools::iproduct!(0..ALPHABET_SIZE, 0..ALPHABET_SIZE, 0..ALPHABET_SIZE)
                     .enumerate()

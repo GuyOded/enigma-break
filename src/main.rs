@@ -1,39 +1,36 @@
 mod breaker;
-use breaker::EnigmaBreaker;
+use breaker::EnigmaSolver;
 use enigma::{Enigma, reflectors, rotor::rotors};
 
 fn main() {
     colog::init();
-    let plain = "internalfleetstatusandplanningmemorandumforseniornavalcommandgeneralsituationandfleetposturewereportthatourfleetremainsdeployedinaccordancewithstandingoperationalguidanceallunitsmaintainassignedpositionswithdisciplineandconsistencytheoverallpostureemphasizesreadinesscontrolledpresenceandthepreservationofoperationalfreedomofaction";
-    let cipher = "QPRDLDGYNOBGZGYYYSYCZETBCYJHMSXIYAUUHHILSPCKTQHXSPDMSQATJWJAMZVJJHZDPNPBGLFIEJYZXUTLFJKWHVYFXJMUGWLIICWQXGCKGFYDISXKJVGCNTZCPYJVGEBGSCOKSWGNKUGHUWBEMBFKKHQVOZLLKBPEOWWUOPJFPOCRUUUTOCXXFZRJXUJUYPLHGJZXJAXTGZKGQQIWNUFGCRMXYSSBABDDWMXXPQKLUCXFSKEOFRCVBOBJFBBKURTTNKRGIWQVAFDOMAJPSMYZYGQXWTHGLCJUGCZTJMPVKDTMHCQQJYCMJMLAAXAQUVUZRKBUYLT";
+    let plain_part = "internalfleetstatusandplanningmemorandumforseniornavalcommandgeneralsituationandfleetposturewereportthatourfleetremainsdeployedinaccordancewithstandingoperationalguidanceallunitsmaintainassignedpositionswithdisciplineandconsistencytheoverallpostureemphasizesreadinesscontrolledpresenceandthepreservationofoperationalfreedomofaction";
+    // let plain_full = "internalfleetstatusandplanningmemorandumforseniornavalcommandgeneralsituationandfleetposturewereportthatourfleetremainsdeployedinaccordancewithstandingoperationalguidanceallunitsmaintainassignedpositionswithdisciplineandconsistencytheoverallpostureemphasizesreadinesscontrolledpresenceandthepreservationofoperationalfreedomofactionoursurfaceformationsinnorthernandwesternseaareascontinueregularpatrolcyclesdesignedtoreinforceregionalcontrolandnavigationalfamiliaritycrewsreporthighconfidenceinmaneuveringandcoordinationandnodegradationofoperationalcapabilitysubsurfaceforcesremainonpatrolwithindesignatedzonesrotatingpositionstoensureuninterruptedpresenceandsustainedobservationtheseunitsmaintainreadinessfortaskinguponreceiptoffurtherdirectionfromhighercommandlogisticalandsupportelementsremainpositionedtoensureenduranceandcontinuityofoperationstheirstabilityallowsthecombatelementsofthefleettofocusfullyonassignedtaskswithoutconcernforimmediatesustainmentlimitationsintentandplanningforoffensiveactionwithregardtooffensiveoperationsourplanningremainsguidedbytheprincipleofdecisiveactionatatimeofourchoosingattackintentionsareframednotasisolatedengagementsbutascoordinatedeffortsdesignedtodisruptenemymovementmoraleandoperationalcoherenceanyfutureattackwillrelyontheintegrationofsurfacesubsurfaceandaerialelementsactinginconcerttheobjectiveistoachievelocalsuperioritythroughtimingconcentrationandsurpriseratherthanprolongedconfrontationplanningemphasizesflexibilityallowingcommanderstoadaptexecutionbasedonevolvingconditionsoffensivereadinessismaintainedthroughcontinuousdrillssimulatedtaskingandinternalreviewofpastoperationslessonslearnedarecirculatedthroughcommandchannelstorefinedoctrineandavoidrepetitionoferrorwenotethatattackplanningremainscontingentuponpoliticalauthorizationandstrategicalignmentallunitsarepreparedtotransitionfrompatrolposturetooffensivepostureuponreceiptofsuchordersleadershipguidanceandideologicalcontextthewilloftheführerremainsacentralguidingforceinshapingourstrategicoutlookhisemphasisondeterminationunityandresolvecontinuestoinformnavaldoctrineandmoralewithinthefleetcommandersareremindedthattheiractionsatseaservenotonlymilitaryobjectivesbutthebroaderdestinyofthereichreferencestotheführerdirectivesemphasizeendurancedisciplineandfaithinultimatevictorytheseprinciplesarereinforcedthroughcommandcommunicationandservetoalignoperationalconductwithnationalpurposeseniorleadershipcontinuestostressthatpatienceandrestraintarenotsignsofweaknessbutinstrumentsofstrengthwhenappliedinserviceofalargerplanthisguidanceremainsconsistentwithcurrentfleetpostureandplanningtimelinesassessmentandoutlookweassessthatthefleetremainsfullycapableofexecutingassigneddefensiveandoffensivetaskspositioningisstablereadinessishighandcommandcohesionisintactpendingfurtherinstructionfromsupremecommandourforceswillmaintaincurrentdeploymentscontinuepreparationforoffensiveactionandupholdthestrategicvisionsetforthbynationalleadershipthefleetstandsready";
+    let cipher = "SEHFLHJENKDCWXLQFJHWLNRJVJXVBZGVUCNWXSYVCKHZLOWMMGKINRQTQPIIXFIJXKZRUUSGQNLMOTQINITDDVWPAZIJUWZLASJMEFHAZSPHOTACPBNQLALAJACHGDFEAQPQDJYSSKBBXCFGPUAMKPZLGIQIOGSASPQMEXRSTYGOUTFALTQJVFEMOFJPKHHLJKJQMCSRRGOHXJUKERHTLCUXVYWEDSDURRRYANPEXXHURHSOIDLIDRFYYVGKCILCJTDHQCRJAGUHWCAJUISTRIKMHYVVRTABDQGRMIZPVIYDSSJUSLBJORPUHTQCGOSQZPQTCPBSZQDZSXWPQHQGMPKQTWASJWIZCLJAKKJTMZIBFPQJSNZJMZQIHIGYQQYBIDDOGODIJXZKWKUDEJUXDHJCOXYQUBMASJTSDMWICEMCHPTHTTFDRLRNQTYUBWWAXDXFPMEHDXWHHQCLEFBALBLEDKTBCFABRPHQXXUNDGXDZYEOKMWXHZTQHHSEADTVCKIVPSIUMMPLJFMENSOENZEVDLMFIYVYIKOXZZINQSDOPTUJXFGFMTJCQYLHCFPDDBKBWPVNWPZFTPZQFQBUGGCSNGPHYJEPTEGOPEEVLKXOCUSQFUXXVVGQXMLIMRXUASDYELSYKZWUSXSKZBQFVLVNSQVPFKNFSJRWWAZNHYYCIULHUKTLMBVSEPJQZQXEHQZVYGTYFWUVISFVILPSONNKNYPXCZCNKBIJUQWXUHNDWRJDILDXYZMAQRFMRLFFWSZMBEUGAXRZNNPMXSABISATPMJRIWVDDTEYFOZQXHLHGZHFMPSCFYFJMZJQWZWZCCXQTAIFWDMREOGDWKRVEEYXNQHIJJWNTSGRMFFXIVSHVBFQQBZRWGEUVXNBJIWFTJABUZPGSELVEFYUBITJFNFWYDRESESONAVZJEFOGNMEJSNNVXAUJHSKTPUVZFAVAXQSNJWDZAWRADHFRGCCSKMNEHBKAJNUGFXBGVHKXQHUNSSMOLZMYPSWHPCFZEQKDBXSAUWOMYQETNLGFUYBUDTPCDBMHLGEEZIRJDIQNGEUQKZWOXGAKJMPESPCNSSRACLTFFJAQZVATQIRBANRSSWYZMXREZBMRHDMHDSGLBZOMULVWVKZQMUCFQHSOIOTVHDDYLSRLPHGUUUBFARFVPCWJJISQRYOAMBWVWETSWDZLGSGZWTKSXVDMSEXJOIILZKVXULCKETHRREAHGWSJANUXAWIVBVBQUYGSUFPSKNUGIGVOXJPMRLZWWEOKAUHLEQOCFBRYCTPCBGTESDCBVRLLFNTDFLTIEDRBJZMFDYXIKMOWCHURICWIHKQZBSYSCKADFDJXGQGGWRVZLQTGKXVKPNTDWTXFPCZPQLWWZQIIDHDXSYVHZMDEXMUPGGFRQYHOUGQYMYNBJTSFSQURFICKPSGGAUCMSYDGKREIMOBEPTCCNPVHFDUQZMCBFNYOTVMWJNQFYZSXKKYWPXLXFXHWVYIHPNPTJZSUTFOFEDEFKEBFXWRZVQONCCBMWKMFYEOKGPYLDFVUHUGUXBGAZMJKXVTVPPCPIBJIWCTERWLTDWRJHXUYOVPQOAQXGKDICJDTREUMCZVLZDRGXHSFNZBKWLTHVHFNUWJHEBIUMEADYVFLQILOORLRYNWTSMKOGBEWQEHJFLEBPNGVWYSIKFOCFUJNBGLXQHMVTHVUFSPXTKVKLJUPBSSUSFVBZWDYFZLAAEOEAHWLZBAUQWUIOIMJQYJBCYYBRUDZMSVKHUDMPZQSJRWGWNBYVUMFRDDUTJUILNNAVIOGZJOGOOPHVGAMUELGISYLEUVPCGIALJNJEGYPSIPDLTOVJHHBFZLKEPNWNHBXULTHVHDBTSAAPVTCTRUZOILANAJKXETAVOLIFKUFMLHZJYOIWCGHCWKBHELWDCQGAYQDEDPBZPEZRIMLYMEJGAWIBRDOIUUPYPZIVXKECWRXFGATVUXYCZTGCKVEKHHZBKGODBHJNZHQVOVGMXNWUCWMTUGNXUZLUDWBLUHJRTRYEECRDNVLIQFSREFURCIYYXXEXJCHXFQTMIAVNJJDDZWOTXQLVJFPVWDRIWUPQJSOOFFLWRTRCZFJJYRYEDJIEZELGDVQBWBTEYULKCXVSRGWZIVQDHVWYHSSJHCXKHIMYMXWRHXGKYUDYXZFFSTNZKHXZFWQCXREBEAMVGXVPLNZKNIVUUWSSNRIBOYYSQCDUOEXGAYBSEBWTOKIPAIWTNBCOTNSUZQQGYBJTFVXWYCKAHTULCTNYMYTHOXNMLHMSKFLYKCNYTFHLXNTSKNOWSAEHUBHRORZJNYNZIRPTDQNPOWHRIUTDUEDJBQXZUFFQCIDYXYGZPUHDQEIEVNWQAZYUGRIMCIWUUSOYVMSDQYIQEZSXWUOLUUMORIHURLQGIUMEARIIVQOFKSEYFTRTYWILPIFHWFLNBIJOKMIEHYZPHMPURCCTZQSKEJTAHWMPXAWQNUMIAMSTGOSQEKOBJMFWBIRWXODUTTEXJNQURNIBSPMZVMFGHSVMAYTHKYRNYVSUUSCUNLKIIVJXYTJWBRMOYYRKWHYYZXHSHTVJDXBLSPIMQZRSHVYVMVAIKYQFQRGKCHLCGPWNWNBANHYZCRIJGYQKOGZFSTULFXMNBTNNIJYBPBLUANFLRYRIEAOHPBHVJCWEFZWBFLTJFSIPIWJVMNFHETVFBMHGQEOVUSQTJCYGLIKPOJQYEKMZYBFNDBOKRIFLMJFMVKKHVYVBDMLKFEWHKONSSXIMHNRKVEQQMNAJRGKWNXRVABVBQBZLCTQMVIDSQQPAFMNBLWIZOFJHNIXVAHIHNPJDUJSLOPNQWBAFLHTDWHZQRNAHNIDVSUZOUECUMWETPIGYIQHFPJHPZIAGKSCKAAYAYDQSIGPXXXGKJKSMSHRRTGKHVDGQDMMRXDOXPEUJEMPQAOKTCPMT";
 
-    let breaker = EnigmaBreaker::new(cipher, plain);
-    breaker.known_plain_text_cipher_break();
+    let solver = EnigmaSolver::new(cipher, plain_part);
+    solver.known_plain_text_cipher_break();
 
-    /* let mut e = Enigma::new(
-        rotors::create_rotor_2(),
-        rotors::create_rotor_1(),
-        rotors::create_rotor_3(),
-        reflectors::create_reflector_b(),
-    );
+    // let mut e = Enigma::new(
+    //     rotors::create_rotor_2(),
+    //     rotors::create_rotor_1(),
+    //     rotors::create_rotor_4(),
+    //     reflectors::create_reflector_a(),
+    // );
 
-    e.set_left_rotor_position_from_int(1);
-    e.set_right_rotor_position_from_int(17);
-    e.set_middle_rotor_position_from_int(5);
-    e.set_transposition('A', 'Z');
-    e.set_transposition('C', 'M');
-    e.set_transposition('D', 'R');
-    e.set_transposition('E', 'H');
-    e.set_transposition('F', 'W');
-    e.set_transposition('G', 'L');
-    e.set_transposition('I', 'S');
-    e.set_transposition('J', 'N');
-    e.set_transposition('K', 'W');
-    e.set_transposition('O', 'X');
-    e.set_transposition('U', 'V');
-    e.set_transposition('Y', 'T');
-    e.set_transposition('B', 'Q');
+    // e.set_left_rotor_position_from_int(6);
+    // e.set_right_rotor_position_from_int(8);
+    // e.set_middle_rotor_position_from_int(8);
+    // e.set_transposition('E', 'P');
+    // e.set_transposition('W', 'F');
+    // e.set_transposition('I', 'D');
+    // e.set_transposition('Q', 'V');
+    // e.set_transposition('A', 'M');
+    // e.set_transposition('B', 'X');
+    // e.set_transposition('G', 'H');
+    // e.set_transposition('Z', 'U');
+    // e.set_transposition('K', 'N');
 
-    let s = e.encrypt_str(plain);
-    println!("{}", s.as_ref().unwrap()); */
+    // let s = e.encrypt_str(cipher);
+    // println!("{}", s.as_ref().unwrap());
 }
