@@ -229,9 +229,9 @@ impl<'a> EnigmaSolver<'a> {
         for (i, c) in self.plain.to_ascii_uppercase().char_indices() {
             if c == target_letter {
                 let untransposed_result = enigma.encrypt_char(c).unwrap();
-                let cipher_char = self.cipher.chars().nth(i).unwrap();
+                let cipher_char = self.cipher.chars().nth(i).unwrap(); // TODO: zip with plain
 
-                match (
+                match ( // TODO: try with nested `if`s
                     untransposed_result != cipher_char,
                     (enigma
                         .get_transpositions()
