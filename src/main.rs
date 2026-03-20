@@ -1,6 +1,6 @@
-mod breaker;
-use breaker::EnigmaSolver;
+mod solver;
 use enigma::{Enigma, reflectors, rotor::rotors};
+use solver::EnigmaSolver;
 
 fn main() {
     colog::init();
@@ -11,8 +11,8 @@ fn main() {
     let solver = EnigmaSolver::new(cipher, plain_part);
     solver.known_plain_text_cipher_break();
 
-    // let mut e = Enigma::new(
     //     rotors::create_rotor_2(),
+    // let mut e = Enigma::new(
     //     rotors::create_rotor_1(),
     //     rotors::create_rotor_4(),
     //     reflectors::create_reflector_a(),
