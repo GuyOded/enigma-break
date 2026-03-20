@@ -10,6 +10,14 @@ use itertools;
 use log::debug;
 use log::trace;
 
+use enigma_settings::EnigmaRotorConfiguration;
+
+use crate::solver::enigma_settings::EnigmaSettings;
+
+mod enigma_settings;
+#[cfg(test)]
+mod tests;
+
 const ALPHABET_SIZE: u8 = 26;
 const FIRST_LETTER: char = 'A';
 const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
@@ -27,63 +35,6 @@ pub struct EnigmaSolver<'a> {
 #[derive(Debug)]
 struct CipherMetadata {
     letter_frequency_order: Vec<(char, u32)>,
-}
-
-#[derive(Debug, PartialEq)]
-struct EnigmaRotorConfiguration {
-    left_rotor_index: usize,
-    middle_rotor_index: usize,
-    right_rotor_index: usize,
-    left_rotor_position: u8,
-    middle_rotor_position: u8,
-    right_rotor_position: u8,
-}
-
-impl EnigmaRotorConfiguration {
-    fn new(
-        left_rotor_index: usize,
-        middle_rotor_index: usize,
-        right_rotor_index: usize,
-        left_rotor_position: u8,
-        middle_rotor_position: u8,
-        right_rotor_position: u8,
-    ) -> Self {
-        let _ = match (left_rotor_index, middle_rotor_index, right_rotor_index) {
-            (left, _, _) if left > 4 => panic!("Left rotor not in range, left={left}"),
-            (_, middle, _) if middle > 4 => {
-                panic!("Middle rotor not in range, middle={middle}")
-            }
-            (_, _, right) if right > 4 => {
-                panic!("Right rotor not in range, right={right}")
-            }
-            _ => (),
-        };
-        let _ = match (
-            left_rotor_position,
-            middle_rotor_position,
-            right_rotor_position,
-        ) {
-            (left, _, _) if left >= ALPHABET_SIZE => {
-                panic!("Left position out of bounds, left={left}")
-            }
-            (_, middle, _) if middle >= ALPHABET_SIZE => {
-                panic!("Middle position out of bounds, middle={middle} ")
-            }
-            (_, _, right) if right >= ALPHABET_SIZE => {
-                panic!("Right position out of bounds, right={right}")
-            }
-            _ => (),
-        };
-
-        Self {
-            left_rotor_index,
-            middle_rotor_index,
-            right_rotor_index,
-            left_rotor_position,
-            middle_rotor_position,
-            right_rotor_position,
-        }
-    }
 }
 
 impl<'a> EnigmaSolver<'a> {
@@ -127,20 +78,26 @@ impl<'a> EnigmaSolver<'a> {
         }
     }
 
-    pub fn known_plain_text_cipher_break(&self) {
+    pub fn known_plain_text_cipher_break(&self) -> Option<EnigmaSettings> {
         for reflector in self.available_reflectors.iter() {
             for combination in self.five_choose_three_combinations.iter() {
-                if let Some((enigma_config, transpositions)) =
+                if let Some((rotor_config, transpositions)) =
                     self.find_enigma_configuration(&combination, &reflector)
                 {
                     println!(
                         "{:#?}, transpositions: {:#?}, reflector: {}",
-                        enigma_config, transpositions, reflector.name
+                        rotor_config, transpositions, reflector.name
                     );
-                    return;
+                    return Some(EnigmaSettings {
+                        rotor_config,
+                        transpositions,
+                        reflector: *reflector,
+                    });
                 }
             }
         }
+
+        None
     }
 
     fn find_enigma_configuration(
@@ -231,7 +188,8 @@ impl<'a> EnigmaSolver<'a> {
                 let untransposed_result = enigma.encrypt_char(c).unwrap();
                 let cipher_char = self.cipher.chars().nth(i).unwrap(); // TODO: zip with plain
 
-                match ( // TODO: try with nested `if`s
+                match (
+                    // TODO: try with nested `if`s
                     untransposed_result != cipher_char,
                     (enigma
                         .get_transpositions()
