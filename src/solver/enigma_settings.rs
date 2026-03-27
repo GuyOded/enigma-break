@@ -9,9 +9,9 @@ pub struct EnigmaRotorConfiguration {
     pub left_rotor_index: usize,
     pub middle_rotor_index: usize,
     pub right_rotor_index: usize,
-    pub left_rotor_position: u8,
-    pub middle_rotor_position: u8,
-    pub right_rotor_position: u8,
+    pub left_rotor_position: usize,
+    pub middle_rotor_position: usize,
+    pub right_rotor_position: usize,
 }
 
 pub struct EnigmaSettings {
@@ -25,9 +25,9 @@ impl EnigmaRotorConfiguration {
         left_rotor_index: usize,
         middle_rotor_index: usize,
         right_rotor_index: usize,
-        left_rotor_position: u8,
-        middle_rotor_position: u8,
-        right_rotor_position: u8,
+        left_rotor_position: usize,
+        middle_rotor_position: usize,
+        right_rotor_position: usize,
     ) -> Self {
         let _ = match (left_rotor_index, middle_rotor_index, right_rotor_index) {
             (left, _, _) if left > 4 => panic!("Left rotor not in range, left={left}"),

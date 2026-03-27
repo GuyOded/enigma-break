@@ -1,5 +1,5 @@
 mod solver;
-// use enigma::{Enigma, reflectors, rotor::rotors};
+use enigma::{Enigma, reflectors, rotor::rotors};
 use solver::EnigmaSolver;
 
 fn main() {

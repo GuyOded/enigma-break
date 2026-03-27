@@ -18,13 +18,31 @@ mod enigma_settings;
 #[cfg(test)]
 mod tests;
 
-const ALPHABET_SIZE: u8 = 26;
+const ALPHABET_SIZE: usize = 26;
 const FIRST_LETTER: char = 'A';
 const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
+static FIVE_CHOOSE_THREE_COMBINATIONS: [[usize; 3]; 10] = [
+    [0, 1, 2],
+    [0, 1, 3],
+    [0, 1, 4],
+    [0, 2, 3],
+    [0, 2, 4],
+    [0, 3, 4],
+    [1, 2, 3],
+    [1, 2, 4],
+    [1, 3, 4],
+    [2, 3, 4],
+];
+static THREE_PERMUTATIONS: [[usize; 3]; 6] = [
+    [0, 1, 2],
+    [0, 2, 1],
+    [1, 0, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [2, 1, 0],
+];
 
 pub struct EnigmaSolver<'a> {
-    five_choose_three_combinations: [[usize; 3]; 10],
-    three_permutations: [[usize; 3]; 6],
     available_rotors: [Rotor; 5],
     available_reflectors: [Reflector; 3],
     cipher: &'a str,
@@ -50,26 +68,6 @@ impl<'a> EnigmaSolver<'a> {
         let rotor_5 = rotors::create_rotor_5();
 
         Self {
-            five_choose_three_combinations: [
-                [0, 1, 2],
-                [0, 1, 3],
-                [0, 1, 4],
-                [0, 2, 3],
-                [0, 2, 4],
-                [0, 3, 4],
-                [1, 2, 3],
-                [1, 2, 4],
-                [1, 3, 4],
-                [2, 3, 4],
-            ],
-            three_permutations: [
-                [0, 1, 2],
-                [0, 2, 1],
-                [1, 0, 2],
-                [1, 2, 0],
-                [2, 0, 1],
-                [2, 1, 0],
-            ],
             available_reflectors: [reflector_a, reflector_b, reflector_c],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
             cipher,
@@ -80,7 +78,7 @@ impl<'a> EnigmaSolver<'a> {
 
     pub fn known_plain_text_cipher_break(&self) -> Option<EnigmaSettings> {
         for reflector in self.available_reflectors.iter() {
-            for combination in self.five_choose_three_combinations.iter() {
+            for combination in FIVE_CHOOSE_THREE_COMBINATIONS.iter() {
                 if let Some((rotor_config, transpositions)) =
                     self.find_enigma_configuration(&combination, &reflector)
                 {
@@ -107,7 +105,7 @@ impl<'a> EnigmaSolver<'a> {
     ) -> Option<(EnigmaRotorConfiguration, HashMap<char, char>)> {
         let mut enigma: Enigma;
 
-        for permutation in self.three_permutations.iter() {
+        for permutation in THREE_PERMUTATIONS.iter() {
             for (i, (left_pos, mid_pos, right_pos)) in
                 itertools::iproduct!(0..ALPHABET_SIZE, 0..ALPHABET_SIZE, 0..ALPHABET_SIZE)
                     .enumerate()
