@@ -7,6 +7,7 @@ use enigma::reflectors::Reflector;
 use enigma::rotor::Rotor;
 use enigma::rotor::rotors;
 use itertools;
+use itertools::Itertools;
 use log::debug;
 use log::trace;
 
@@ -20,7 +21,8 @@ mod tests;
 
 const ALPHABET_SIZE: usize = 26;
 const FIRST_LETTER: char = 'A';
-const FIRST_LETTER_ASCII_INDEX: usize = FIRST_LETTER as usize;
+const LAST_LETTER: char = 'Z';
+
 static FIVE_CHOOSE_THREE_COMBINATIONS: [[usize; 3]; 10] = [
     [0, 1, 2],
     [0, 1, 3],
@@ -46,13 +48,12 @@ pub struct EnigmaSolver<'a> {
     available_rotors: [Rotor; 5],
     available_reflectors: [Reflector; 3],
     cipher: &'a str,
-    plain: &'a str,
     cipher_metadata: CipherMetadata,
 }
 
 #[derive(Debug)]
 struct CipherMetadata {
-    letter_frequency_order: Vec<(char, u32)>,
+    letter_positions: Vec<(char, Vec<usize>)>,
 }
 
 impl<'a> EnigmaSolver<'a> {
@@ -71,7 +72,6 @@ impl<'a> EnigmaSolver<'a> {
             available_reflectors: [reflector_a, reflector_b, reflector_c],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
             cipher,
-            plain,
             cipher_metadata: EnigmaSolver::build_cipher_metadata(plain),
         }
     }
@@ -111,9 +111,9 @@ impl<'a> EnigmaSolver<'a> {
                     .enumerate()
             {
                 enigma = Enigma::new(
-                    self.available_rotors[1].clone(),
-                    self.available_rotors[0].clone(),
-                    self.available_rotors[3].clone(),
+                    self.available_rotors[combination[permutation[0]]].clone(),
+                    self.available_rotors[combination[permutation[1]]].clone(),
+                    self.available_rotors[combination[permutation[2]]].clone(),
                     *reflector,
                 );
 
@@ -150,22 +150,25 @@ impl<'a> EnigmaSolver<'a> {
         enigma: &mut Enigma,
         enigma_rotor_configuration: &EnigmaRotorConfiguration,
     ) -> Option<HashMap<char, char>> {
-        let currently_tested_char = self.cipher_metadata.letter_frequency_order[0].0;
+        let most_frequent_plain_char = self.cipher_metadata.letter_positions[0].0;
+        let letter_positions_in_plain = &self.cipher_metadata.letter_positions[0].1;
 
-        for transposition_candidate in ['P'] {
-            trace!("Trying {currently_tested_char} <---> {transposition_candidate}");
+        for transposition_candidate in FIRST_LETTER..LAST_LETTER {
+            trace!("Trying {most_frequent_plain_char} <---> {transposition_candidate}");
 
-            enigma.set_left_rotor_position_from_int(/* enigma_rotor_configuration.left_rotor_position */ 6);
+            enigma.set_left_rotor_position_from_int(enigma_rotor_configuration.left_rotor_position);
             enigma.set_middle_rotor_position_from_int(
-                /* enigma_rotor_configuration.middle_rotor_position */ 8,
+                enigma_rotor_configuration.middle_rotor_position,
             );
             enigma
-                .set_right_rotor_position_from_int(/* enigma_rotor_configuration.right_rotor_position */ 8);
-            enigma.set_transposition(currently_tested_char, transposition_candidate);
+                .set_right_rotor_position_from_int(enigma_rotor_configuration.right_rotor_position);
+            enigma.set_transposition(most_frequent_plain_char, transposition_candidate);
 
-            if let Some(transpositions) =
-                self.build_potential_transposition_for_target_letter(enigma, currently_tested_char)
-            {
+            if let Some(transpositions) = self.build_potential_transposition_for_target_letter(
+                enigma,
+                most_frequent_plain_char,
+                letter_positions_in_plain,
+            ) {
                 debug!("Found transposition possibility: {transpositions:#?}");
                 return Some(transpositions.clone());
             }
@@ -180,57 +183,76 @@ impl<'a> EnigmaSolver<'a> {
         &self,
         enigma: &'b mut Enigma,
         target_letter: char,
+        letter_positions: &Vec<usize>,
     ) -> Option<&'b HashMap<char, char>> {
-        for (i, c) in self.plain.to_ascii_uppercase().char_indices() {
-            if c == target_letter {
-                let untransposed_result = enigma.encrypt_char(c).unwrap();
-                let cipher_char = self.cipher.chars().nth(i).unwrap(); // TODO: zip with plain
+        let mut last_letter_position = 0;
+        // let mut test_enigma = Enigma::new(
+        //     self.available_rotors[1].clone(),
+        //     self.available_rotors[0].clone(),
+        //     self.available_rotors[3].clone(),
+        //     self.available_reflectors[0],
+        // );
 
-                match (
-                    // TODO: try with nested `if`s
-                    untransposed_result != cipher_char,
-                    (enigma
-                        .get_transpositions()
-                        .contains_key(&untransposed_result)
-                        || enigma.get_transpositions().contains_key(&cipher_char)),
-                ) {
-                    (true, true) => {
-                        trace!(
-                            "d={untransposed_result}, c={cipher_char}, i={i}, {:#?}",
-                            enigma.get_transpositions()
-                        );
-                        return None;
-                    }
-                    (true, false) => enigma.set_transposition(untransposed_result, cipher_char),
-                    (false, _) => (),
+        // test_enigma.set_left_rotor_position_from_int(6);
+        // test_enigma.set_middle_rotor_position_from_int(8);
+        // test_enigma.set_right_rotor_position_from_int(8);
+        // test_enigma.set_transposition('E', 'P');
+
+        for &position in letter_positions.iter() {
+            enigma.increment_by(position - last_letter_position);
+            // for _ in 0..(position - last_letter_position) {
+            //     let c = test_enigma.encrypt_char(target_letter).unwrap();
+            //     print!("{c:#}");
+            // }
+            // let test_untransposed = test_enigma.encrypt_char(target_letter).unwrap();
+            let untransposed_result = enigma.encrypt_char(target_letter).unwrap();
+
+            // if test_untransposed != untransposed_result {
+            //     println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
+            // }
+            let cipher_char = self.cipher.chars().nth(position).unwrap(); // TODO: zip with plain
+
+            if untransposed_result != cipher_char {
+                if enigma
+                    .get_transpositions()
+                    .contains_key(&untransposed_result)
+                    || enigma.get_transpositions().contains_key(&cipher_char)
+                {
+                    trace!(
+                        "d={untransposed_result}, c={cipher_char}, i={position}, {:#?}",
+                        enigma.get_transpositions()
+                    );
+                    return None;
                 }
-                continue;
+
+                enigma.set_transposition(untransposed_result, cipher_char);
             }
-            let _ = enigma.encrypt_char(c);
+
+            last_letter_position = position + 1;
         }
 
         Some(enigma.get_transpositions())
     }
 
     fn build_cipher_metadata(plain: &str) -> CipherMetadata {
-        let mut letter_frequencies: [u32; ALPHABET_SIZE as usize] = [0; ALPHABET_SIZE as usize];
-        let mut letter_frequency_order: Vec<(char, u32)> = Vec::new();
-        plain.to_ascii_uppercase().chars().for_each(|c| {
-            letter_frequencies[(c as u8) as usize - FIRST_LETTER_ASCII_INDEX] += 1;
-        });
+        let mut letter_indices: HashMap<char, Vec<usize>> = HashMap::new();
+        plain
+            .to_ascii_uppercase()
+            .char_indices()
+            .for_each(|(i, c)| {
+                if let Some(indices) = letter_indices.get_mut(&c) {
+                    indices.push(i);
+                    return;
+                }
 
-        letter_frequencies
-            .iter()
-            .enumerate()
-            .for_each(|(i, &freq)| {
-                letter_frequency_order
-                    .push(((i as u8 + FIRST_LETTER_ASCII_INDEX as u8) as char, freq));
+                letter_indices.insert(c, vec![i]);
             });
 
-        letter_frequency_order.sort_by_key(|&(_, freq)| Reverse(freq));
-
         CipherMetadata {
-            letter_frequency_order,
+            letter_positions: letter_indices
+                .into_iter()
+                .sorted_by_key(|(_, indices)| Reverse(indices.len()))
+                .collect(),
         }
     }
 }
