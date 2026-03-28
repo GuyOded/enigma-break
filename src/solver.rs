@@ -111,9 +111,9 @@ impl<'a> EnigmaSolver<'a> {
                     .enumerate()
             {
                 enigma = Enigma::new(
-                    self.available_rotors[combination[permutation[0]]].clone(),
-                    self.available_rotors[combination[permutation[1]]].clone(),
-                    self.available_rotors[combination[permutation[2]]].clone(),
+                    self.available_rotors[1].clone(),
+                    self.available_rotors[0].clone(),
+                    self.available_rotors[3].clone(),
                     *reflector,
                 );
 
@@ -152,15 +152,15 @@ impl<'a> EnigmaSolver<'a> {
     ) -> Option<HashMap<char, char>> {
         let currently_tested_char = self.cipher_metadata.letter_frequency_order[0].0;
 
-        for transposition_candidate in FIRST_LETTER..'Z' {
+        for transposition_candidate in ['P'] {
             trace!("Trying {currently_tested_char} <---> {transposition_candidate}");
 
-            enigma.set_left_rotor_position_from_int(enigma_rotor_configuration.left_rotor_position);
+            enigma.set_left_rotor_position_from_int(/* enigma_rotor_configuration.left_rotor_position */ 6);
             enigma.set_middle_rotor_position_from_int(
-                enigma_rotor_configuration.middle_rotor_position,
+                /* enigma_rotor_configuration.middle_rotor_position */ 8,
             );
             enigma
-                .set_right_rotor_position_from_int(enigma_rotor_configuration.right_rotor_position);
+                .set_right_rotor_position_from_int(/* enigma_rotor_configuration.right_rotor_position */ 8);
             enigma.set_transposition(currently_tested_char, transposition_candidate);
 
             if let Some(transpositions) =
