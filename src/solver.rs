@@ -153,7 +153,7 @@ impl<'a> EnigmaSolver<'a> {
         let most_frequent_plain_char = self.cipher_metadata.letter_positions[0].0;
         let letter_positions_in_plain = &self.cipher_metadata.letter_positions[0].1;
 
-        for transposition_candidate in FIRST_LETTER..LAST_LETTER {
+        for transposition_candidate in FIRST_LETTER..=LAST_LETTER {
             trace!("Trying {most_frequent_plain_char} <---> {transposition_candidate}");
 
             enigma.set_left_rotor_position_from_int(enigma_rotor_configuration.left_rotor_position);
@@ -186,30 +186,11 @@ impl<'a> EnigmaSolver<'a> {
         letter_positions: &Vec<usize>,
     ) -> Option<&'b HashMap<char, char>> {
         let mut last_letter_position = 0;
-        // let mut test_enigma = Enigma::new(
-        //     self.available_rotors[1].clone(),
-        //     self.available_rotors[0].clone(),
-        //     self.available_rotors[3].clone(),
-        //     self.available_reflectors[0],
-        // );
-
-        // test_enigma.set_left_rotor_position_from_int(6);
-        // test_enigma.set_middle_rotor_position_from_int(8);
-        // test_enigma.set_right_rotor_position_from_int(8);
-        // test_enigma.set_transposition('E', 'P');
 
         for &position in letter_positions.iter() {
             enigma.increment_by(position - last_letter_position);
-            // for _ in 0..(position - last_letter_position) {
-            //     let c = test_enigma.encrypt_char(target_letter).unwrap();
-            //     print!("{c:#}");
-            // }
-            // let test_untransposed = test_enigma.encrypt_char(target_letter).unwrap();
             let untransposed_result = enigma.encrypt_char(target_letter).unwrap();
 
-            // if test_untransposed != untransposed_result {
-            //     println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
-            // }
             let cipher_char = self.cipher.chars().nth(position).unwrap(); // TODO: zip with plain
 
             if untransposed_result != cipher_char {
