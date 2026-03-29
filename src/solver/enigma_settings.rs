@@ -18,6 +18,7 @@ pub struct EnigmaRotorConfiguration {
     pub right_rotor_position: usize,
 }
 
+#[derive(Debug)]
 pub struct EnigmaSettings {
     pub rotor_config: EnigmaRotorConfiguration,
     pub transpositions: HashMap<char, char>,
@@ -26,7 +27,7 @@ pub struct EnigmaSettings {
 
 impl From<EnigmaSettings> for Enigma {
     fn from(value: EnigmaSettings) -> Self {
-        let enigma = Enigma::new(
+        let mut enigma = Enigma::new(
             rotor_from_index(value.rotor_config.left_rotor_index),
             rotor_from_index(value.rotor_config.middle_rotor_index),
             rotor_from_index(value.rotor_config.right_rotor_index),
@@ -36,6 +37,10 @@ impl From<EnigmaSettings> for Enigma {
         enigma.set_left_rotor_position_from_int(value.rotor_config.left_rotor_position);
         enigma.set_middle_rotor_position_from_int(value.rotor_config.middle_rotor_position);
         enigma.set_right_rotor_position_from_int(value.rotor_config.right_rotor_position);
+
+        for (first, second) in value.transpositions {
+            enigma.set_transposition(first, second);
+        }
 
         enigma
     }
