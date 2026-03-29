@@ -82,7 +82,7 @@ impl<'a> EnigmaSolver<'a> {
                 if let Some((rotor_config, transpositions)) =
                     self.find_enigma_configuration(&combination, &reflector)
                 {
-                    println!(
+                    debug!(
                         "{:#?}, transpositions: {:#?}, reflector: {}",
                         rotor_config, transpositions, reflector.name
                     );

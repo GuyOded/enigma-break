@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use enigma::reflectors::Reflector;
+use enigma::{
+    Enigma,
+    reflectors::Reflector,
+    rotor::{Rotor, rotors},
+};
 
 use crate::solver::ALPHABET_SIZE;
 
@@ -18,6 +22,34 @@ pub struct EnigmaSettings {
     pub rotor_config: EnigmaRotorConfiguration,
     pub transpositions: HashMap<char, char>,
     pub reflector: Reflector,
+}
+
+impl From<EnigmaSettings> for Enigma {
+    fn from(value: EnigmaSettings) -> Self {
+        let enigma = Enigma::new(
+            rotor_from_index(value.rotor_config.left_rotor_index),
+            rotor_from_index(value.rotor_config.middle_rotor_index),
+            rotor_from_index(value.rotor_config.right_rotor_index),
+            value.reflector,
+        );
+
+        enigma.set_left_rotor_position_from_int(value.rotor_config.left_rotor_position);
+        enigma.set_middle_rotor_position_from_int(value.rotor_config.middle_rotor_position);
+        enigma.set_right_rotor_position_from_int(value.rotor_config.right_rotor_position);
+
+        enigma
+    }
+}
+
+fn rotor_from_index(index: usize) -> Rotor {
+    match index {
+        0 => rotors::create_rotor_1(),
+        1 => rotors::create_rotor_2(),
+        2 => rotors::create_rotor_3(),
+        3 => rotors::create_rotor_4(),
+        4 => rotors::create_rotor_5(),
+        _ => panic!("Index '{index}' is not between 0-4. Only 5 rotors are available."),
+    }
 }
 
 impl EnigmaRotorConfiguration {
