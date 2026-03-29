@@ -44,10 +44,9 @@ static THREE_PERMUTATIONS: [[usize; 3]; 6] = [
     [2, 1, 0],
 ];
 
-pub struct EnigmaSolver<'a> {
+pub struct EnigmaSolver {
     available_rotors: [Rotor; 5],
     available_reflectors: [Reflector; 3],
-    cipher: &'a str,
     cipher_metadata: CipherMetadata,
 }
 
@@ -56,8 +55,8 @@ struct CipherMetadata {
     letter_positions: Vec<(char, Vec<(usize, char)>)>,
 }
 
-impl<'a> EnigmaSolver<'a> {
-    pub fn new(cipher: &'a str, plain: &'a str) -> Self {
+impl EnigmaSolver {
+    pub fn new(cipher: &str, plain: &str) -> Self {
         let reflector_a = reflectors::create_reflector_a();
         let reflector_b = reflectors::create_reflector_b();
         let reflector_c = reflectors::create_reflector_c();
@@ -71,7 +70,6 @@ impl<'a> EnigmaSolver<'a> {
         Self {
             available_reflectors: [reflector_a, reflector_b, reflector_c],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
-            cipher,
             cipher_metadata: EnigmaSolver::build_cipher_metadata(plain, cipher),
         }
     }
