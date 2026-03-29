@@ -53,7 +53,7 @@ pub struct EnigmaSolver<'a> {
 
 #[derive(Debug)]
 struct CipherMetadata {
-    letter_positions: Vec<(char, Vec<usize>)>,
+    letter_positions: Vec<(char, Vec<(usize, char)>)>,
 }
 
 impl<'a> EnigmaSolver<'a> {
@@ -72,7 +72,7 @@ impl<'a> EnigmaSolver<'a> {
             available_reflectors: [reflector_a, reflector_b, reflector_c],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
             cipher,
-            cipher_metadata: EnigmaSolver::build_cipher_metadata(plain),
+            cipher_metadata: EnigmaSolver::build_cipher_metadata(plain, cipher),
         }
     }
 
@@ -183,15 +183,13 @@ impl<'a> EnigmaSolver<'a> {
         &self,
         enigma: &'b mut Enigma,
         target_letter: char,
-        letter_positions: &Vec<usize>,
+        letter_indexes_with_corresponding_cipher_char: &Vec<(usize, char)>,
     ) -> Option<&'b HashMap<char, char>> {
         let mut last_letter_position = 0;
 
-        for &position in letter_positions.iter() {
+        for &(position, cipher_char) in letter_indexes_with_corresponding_cipher_char.iter() {
             enigma.increment_by(position - last_letter_position);
             let untransposed_result = enigma.encrypt_char(target_letter).unwrap();
-
-            let cipher_char = self.cipher.chars().nth(position).unwrap(); // TODO: zip with plain
 
             if untransposed_result != cipher_char {
                 if enigma
@@ -215,22 +213,24 @@ impl<'a> EnigmaSolver<'a> {
         Some(enigma.get_transpositions())
     }
 
-    fn build_cipher_metadata(plain: &str) -> CipherMetadata {
-        let mut letter_indices: HashMap<char, Vec<usize>> = HashMap::new();
+    fn build_cipher_metadata(plain: &str, cipher: &str) -> CipherMetadata {
+        let mut letter_index_map: HashMap<char, Vec<(usize, char)>> = HashMap::new();
         plain
             .to_ascii_uppercase()
-            .char_indices()
-            .for_each(|(i, c)| {
-                if let Some(indices) = letter_indices.get_mut(&c) {
-                    indices.push(i);
+            .chars()
+            .zip(cipher.chars())
+            .enumerate()
+            .for_each(|(i, (plain, cipher))| {
+                if let Some(indices) = letter_index_map.get_mut(&plain) {
+                    indices.push((i, cipher));
                     return;
                 }
 
-                letter_indices.insert(c, vec![i]);
+                letter_index_map.insert(plain, vec![(i, cipher)]);
             });
 
         CipherMetadata {
-            letter_positions: letter_indices
+            letter_positions: letter_index_map
                 .into_iter()
                 .sorted_by_key(|(_, indices)| Reverse(indices.len()))
                 .collect(),
