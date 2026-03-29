@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = "4.6.0"
 colog = "1.4.0"
 enigma = { git = "https://github.com/GuyOded/enigma-rust-lib.git", version = "4.1.0" }
 itertools = "0.14.0"
