@@ -20,9 +20,9 @@ pub enum Commands {
 
 #[derive(Args, Debug)]
 pub struct TestArgs {
-    #[arg(long, short, default_value_t = true)]
+    #[arg(long, short, default_value = None)]
     /// Test solver with an easy to solve cipher data so solution can be built quickly. Mutually exclusive together with hard.
-    pub easy: bool,
+    pub easy: Option<bool>,
     /// Test solver with hard to solve cipher data, solution will take time to be built. Mutually exclusive together with easy.
     #[arg(long, default_value_t = false)]
     pub hard: bool,
