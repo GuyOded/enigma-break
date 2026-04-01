@@ -23,12 +23,21 @@ fn main() {
 }
 
 fn run_test(args: TestArgs) {
-    match (args.easy, args.hard) {
-        (true, true) => error!("Must choose either 'easy' or 'hard'."),
-        (true, false) => solve_easy(),
-        (false, true) => solve_hard(),
-        (false, false) => panic!("Unreachable"),
+    if let Some(easy) = args.easy {
+        match (easy, args.hard) {
+            (true, true) => error!("Must choose either 'easy' or 'hard'."),
+            (true, false) => solve_easy(),
+            (false, true) => solve_hard(),
+            (false, false) => panic!("Unreachable"),
+        }
     }
+
+    if args.hard {
+        solve_hard();
+        return;
+    }
+
+    solve_easy();
 }
 
 fn solve_easy() {
