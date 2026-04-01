@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "Debug executable 'enigma_break'",
+            "name": "Debug executable 'enigma_solver'",
             "type": "lldb",
             "request": "launch",
             "env": {
@@ -15,19 +15,23 @@
             "cargo": {
                 "args": [
                     "run",
-                    "--bin=enigma_break"
+                    "--bin=enigma_solver",
+                    "--",
+                    "-d",
+                    "test",
+                    "--easy"
                 ]
             },
             "args": []
         },
         {
-            "name": "Debug unit tests in executable 'enigma_break'",
+            "name": "Debug unit tests in executable 'enigma_solver'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "test",
-                    "--bin=enigma_break"
+                    "--bin=enigma_solver"
                 ]
             }
         }

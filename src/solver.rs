@@ -5,7 +5,7 @@ use enigma::Enigma;
 use enigma::reflectors;
 use enigma::reflectors::Reflector;
 use enigma::rotor::Rotor;
-use enigma::rotor::rotors;
+use enigma::rotors;
 use itertools;
 use itertools::Itertools;
 use log::debug;
