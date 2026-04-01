@@ -104,17 +104,16 @@ impl EnigmaSolver {
         let mut enigma: Enigma;
 
         for permutation in THREE_PERMUTATIONS.iter() {
+            enigma = Enigma::new(
+                self.available_rotors[combination[permutation[0]]].clone(),
+                self.available_rotors[combination[permutation[1]]].clone(),
+                self.available_rotors[combination[permutation[2]]].clone(),
+                *reflector,
+            );
             for (i, (left_pos, mid_pos, right_pos)) in
                 itertools::iproduct!(0..ALPHABET_SIZE, 0..ALPHABET_SIZE, 0..ALPHABET_SIZE)
                     .enumerate()
             {
-                enigma = Enigma::new(
-                    self.available_rotors[combination[permutation[0]]].clone(),
-                    self.available_rotors[combination[permutation[1]]].clone(),
-                    self.available_rotors[combination[permutation[2]]].clone(),
-                    *reflector,
-                );
-
                 let currently_tested_config = EnigmaRotorConfiguration::new(
                     combination[permutation[0]],
                     combination[permutation[1]],
