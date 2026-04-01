@@ -5,7 +5,7 @@ use enigma::{Enigma, reflectors::Reflector, rotor::Rotor};
 
 use crate::solver::ALPHABET_SIZE;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EnigmaRotorConfiguration {
     pub left_rotor_index: usize,
     pub middle_rotor_index: usize,

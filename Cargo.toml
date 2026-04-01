@@ -10,3 +10,4 @@ enigma = { git = "https://github.com/GuyOded/enigma-rust-lib.git", version = "5.
 itertools = "0.14.0"
 log = "0.4.29"
 thiserror = "2.0.17"
+threadpool = "1.8.1"

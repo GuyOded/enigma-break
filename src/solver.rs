@@ -1,5 +1,10 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::thread::available_parallelism;
 
 use enigma::Enigma;
 use enigma::reflectors;
@@ -12,6 +17,7 @@ use log::debug;
 use log::trace;
 
 use enigma_settings::EnigmaRotorConfiguration;
+use threadpool::ThreadPool;
 
 use crate::solver::enigma_settings::EnigmaSettings;
 
@@ -48,9 +54,20 @@ pub struct EnigmaSolver {
     available_rotors: [Rotor; 5],
     available_reflectors: [Reflector; 3],
     cipher_metadata: CipherMetadata,
+    pool: ThreadPool,
+    stop_flag: Arc<AtomicBool>,
+    solution: Arc<
+        Mutex<
+            Option<(
+                EnigmaRotorConfiguration,
+                HashMap<char, char>,
+                Arc<Reflector>,
+            )>,
+        >,
+    >,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CipherMetadata {
     letter_positions: Vec<(char, Vec<(usize, char)>)>,
 }
@@ -67,88 +84,121 @@ impl EnigmaSolver {
         let rotor_4 = rotors::create_rotor_4();
         let rotor_5 = rotors::create_rotor_5();
 
+        let available_cores = available_parallelism().unwrap().get();
+        let threadpool = ThreadPool::new(available_cores - 1);
+
         Self {
             available_reflectors: [reflector_a, reflector_b, reflector_c],
             available_rotors: [rotor_1, rotor_2, rotor_3, rotor_4, rotor_5],
             cipher_metadata: EnigmaSolver::build_cipher_metadata(plain, cipher),
+            pool: threadpool,
+            stop_flag: Arc::new(AtomicBool::from(false)),
+            solution: Arc::new(Mutex::new(None)),
         }
     }
 
     pub fn known_plain_text_cipher_break(&self) -> Option<EnigmaSettings> {
         for reflector in self.available_reflectors.iter() {
             for combination in FIVE_CHOOSE_THREE_COMBINATIONS.iter() {
-                if let Some((rotor_config, transpositions)) =
-                    self.find_enigma_configuration(&combination, &reflector)
-                {
-                    debug!(
-                        "{:#?}, transpositions: {:#?}, reflector: {}",
-                        rotor_config, transpositions, reflector.name
-                    );
-                    return Some(EnigmaSettings {
-                        rotor_config,
-                        transpositions,
-                        reflector: *reflector,
-                    });
-                }
+                self.find_enigma_configuration(&combination, &reflector);
             }
+        }
+
+        self.pool.join();
+
+        let data = self.solution.lock().unwrap();
+        if let Some((rotor_config, transpositions, reflector)) = (*data).clone() {
+            debug!(
+                "{:#?}, transpositions: {:#?}, reflector: {}",
+                rotor_config, transpositions, reflector.name
+            );
+            return Some(EnigmaSettings {
+                rotor_config,
+                transpositions,
+                reflector: (*reflector).clone(),
+            });
         }
 
         None
     }
 
-    fn find_enigma_configuration(
-        &self,
-        combination: &[usize; 3],
-        reflector: &Reflector,
-    ) -> Option<(EnigmaRotorConfiguration, HashMap<char, char>)> {
-        let mut enigma: Enigma;
+    fn find_enigma_configuration(&self, combination: &[usize; 3], reflector: &Reflector) {
+        let cipher_metadata = Arc::new(self.cipher_metadata.clone());
+        let reflector_name = reflector.name;
+        if self.stop_flag.load(Ordering::Relaxed) {
+            return;
+        }
 
         for permutation in THREE_PERMUTATIONS.iter() {
-            enigma = Enigma::new(
+            let left_rotor_index = combination[permutation[0]];
+            let middle_rotor_index = combination[permutation[1]];
+            let right_rotor_index = combination[permutation[2]];
+
+            let mut enigma = Enigma::new(
                 self.available_rotors[combination[permutation[0]]].clone(),
                 self.available_rotors[combination[permutation[1]]].clone(),
                 self.available_rotors[combination[permutation[2]]].clone(),
                 *reflector,
             );
-            for (i, (left_pos, mid_pos, right_pos)) in
-                itertools::iproduct!(0..ALPHABET_SIZE, 0..ALPHABET_SIZE, 0..ALPHABET_SIZE)
-                    .enumerate()
-            {
-                let currently_tested_config = EnigmaRotorConfiguration::new(
-                    combination[permutation[0]],
-                    combination[permutation[1]],
-                    combination[permutation[2]],
-                    left_pos,
-                    mid_pos,
-                    right_pos,
-                );
 
-                let transpositions =
-                    self.try_building_transpositions(&mut enigma, &currently_tested_config);
+            let solution_config = Arc::clone(&self.solution);
+            let cipher_metadata_clone = Arc::clone(&cipher_metadata);
+            let stop_flag = Arc::clone(&self.stop_flag);
+            let reflector_arc = Arc::new(reflector.clone());
 
-                if let Some(transpositions) = transpositions {
-                    return Some((currently_tested_config, transpositions));
-                }
-
-                if i % 2000 == 0 {
-                    debug!(
-                        "Testing current config: {currently_tested_config:#?}, reflector: {}",
-                        reflector.name
+            self.pool.execute(move || {
+                for (i, (left_pos, mid_pos, right_pos)) in
+                    itertools::iproduct!(0..ALPHABET_SIZE, 0..ALPHABET_SIZE, 0..ALPHABET_SIZE)
+                        .enumerate()
+                {
+                    if stop_flag.load(Ordering::Relaxed) {
+                        return;
+                    }
+                    let currently_tested_config = EnigmaRotorConfiguration::new(
+                        left_rotor_index,
+                        middle_rotor_index,
+                        right_rotor_index,
+                        left_pos,
+                        mid_pos,
+                        right_pos,
                     );
-                }
-            }
-        }
 
-        None
+                    let transpositions = EnigmaSolver::try_building_transpositions(
+                        &mut enigma,
+                        &currently_tested_config,
+                        Arc::clone(&cipher_metadata_clone),
+                        Arc::clone(&stop_flag),
+                    );
+
+                    if let Some(transpositions) = transpositions {
+                        let mut data = solution_config.lock().unwrap();
+                        *data = Some((
+                            currently_tested_config,
+                            transpositions,
+                            Arc::clone(&reflector_arc),
+                        ));
+                        return;
+                    }
+
+                    if i % 2000 == 0 {
+                        debug!(
+                            "Testing current config: {currently_tested_config:#?}, reflector: {}",
+                            reflector_name
+                        );
+                    }
+                }
+            });
+        }
     }
 
-    fn try_building_transpositions<'b>(
-        &self,
+    fn try_building_transpositions(
         enigma: &mut Enigma,
         enigma_rotor_configuration: &EnigmaRotorConfiguration,
+        cipher_metadata: Arc<CipherMetadata>,
+        stop_flag: Arc<AtomicBool>,
     ) -> Option<HashMap<char, char>> {
-        let most_frequent_plain_char = self.cipher_metadata.letter_positions[0].0;
-        let letter_positions_in_plain = &self.cipher_metadata.letter_positions[0].1;
+        let most_frequent_plain_char = cipher_metadata.letter_positions[0].0;
+        let letter_positions_in_plain = &cipher_metadata.letter_positions[0].1;
 
         for transposition_candidate in FIRST_LETTER..=LAST_LETTER {
             trace!("Trying {most_frequent_plain_char} <---> {transposition_candidate}");
@@ -161,11 +211,14 @@ impl EnigmaSolver {
                 .set_right_rotor_position_from_int(enigma_rotor_configuration.right_rotor_position);
             enigma.set_transposition(most_frequent_plain_char, transposition_candidate);
 
-            if let Some(transpositions) = self.build_potential_transposition_for_target_letter(
-                enigma,
-                most_frequent_plain_char,
-                letter_positions_in_plain,
-            ) {
+            if let Some(transpositions) =
+                EnigmaSolver::build_potential_transposition_for_target_letter(
+                    enigma,
+                    most_frequent_plain_char,
+                    letter_positions_in_plain,
+                    Arc::clone(&stop_flag),
+                )
+            {
                 debug!("Found transposition possibility: {transpositions:#?}");
                 return Some(transpositions.clone());
             }
@@ -177,14 +230,18 @@ impl EnigmaSolver {
     }
 
     fn build_potential_transposition_for_target_letter<'b>(
-        &self,
         enigma: &'b mut Enigma,
         target_letter: char,
         letter_indexes_with_corresponding_cipher_char: &Vec<(usize, char)>,
+        stop_flag: Arc<AtomicBool>,
     ) -> Option<&'b HashMap<char, char>> {
         let mut last_letter_position = 0;
 
         for &(position, cipher_char) in letter_indexes_with_corresponding_cipher_char.iter() {
+            if stop_flag.load(Ordering::Relaxed) {
+                return None;
+            }
+
             enigma.increment_by(position - last_letter_position);
             let untransposed_result = enigma.encrypt_char(target_letter).unwrap();
 
@@ -207,6 +264,7 @@ impl EnigmaSolver {
             last_letter_position = position + 1;
         }
 
+        stop_flag.store(true, Ordering::Relaxed);
         Some(enigma.get_transpositions())
     }
 
