@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
-use enigma::{
-    Enigma,
-    reflectors::Reflector,
-    rotor::{Rotor, rotors},
-};
+use enigma::rotors;
+use enigma::{Enigma, reflectors::Reflector, rotor::Rotor};
 
 use crate::solver::ALPHABET_SIZE;
 

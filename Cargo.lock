@@ -135,8 +135,8 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "enigma"
-version = "4.1.0"
-source = "git+https://github.com/GuyOded/enigma-rust-lib.git#27d99045fef247964608e918f9b4fba9d7049492"
+version = "5.0.1"
+source = "git+https://github.com/GuyOded/enigma-rust-lib.git#e1cd4fcec9a5cdf1ebcf1a32176e2d0c977706c3"
 
 [[package]]
 name = "enigma_solver"
