@@ -30,6 +30,8 @@ fn run_test(args: TestArgs) {
             (false, true) => solve_hard(),
             (false, false) => panic!("Unreachable"),
         }
+
+        return;
     }
 
     if args.hard {
