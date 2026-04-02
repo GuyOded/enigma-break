@@ -10,7 +10,6 @@ use enigma::reflectors;
 use enigma::reflectors::Reflector;
 use enigma::rotor::Rotor;
 use enigma::rotors;
-use itertools;
 use log::debug;
 mod consts;
 mod enigma_solver_utils;
@@ -77,7 +76,7 @@ impl EnigmaSolver {
         for reflector in self.available_reflectors.iter() {
             for combination in consts::FIVE_CHOOSE_THREE_COMBINATIONS.iter() {
                 if let Some((rotor_config, transpositions)) =
-                    self.find_enigma_configuration(&combination, &reflector)
+                    self.find_enigma_configuration(combination, reflector)
                 {
                     debug!(
                         "{:#?}, transpositions: {:#?}, reflector: {}",
@@ -174,7 +173,7 @@ impl MultiThreadedEnigmaSolver {
     pub fn solve(&self) -> Option<EnigmaSettings> {
         for reflector in self.available_reflectors.iter() {
             for combination in consts::FIVE_CHOOSE_THREE_COMBINATIONS.iter() {
-                self.find_enigma_configuration(&combination, &reflector);
+                self.find_enigma_configuration(combination, reflector);
             }
         }
 
@@ -189,7 +188,7 @@ impl MultiThreadedEnigmaSolver {
             return Some(EnigmaSettings {
                 rotor_config,
                 transpositions,
-                reflector: (*reflector).clone(),
+                reflector: (*reflector),
             });
         }
 
@@ -218,7 +217,7 @@ impl MultiThreadedEnigmaSolver {
             let solution_config = Arc::clone(&self.solution);
             let cipher_metadata_clone = Arc::clone(&cipher_metadata);
             let stop_flag = Arc::clone(&self.stop_flag);
-            let reflector_arc = Arc::new(reflector.clone());
+            let reflector_arc = Arc::new(*reflector);
 
             self.pool.execute(move || {
                 for (i, (left_pos, mid_pos, right_pos)) in

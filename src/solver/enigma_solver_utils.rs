@@ -47,7 +47,7 @@ pub(super) fn build_transpositions(
                 enigma,
                 most_frequent_plain_char,
                 letter_positions_in_plain,
-                Arc::clone(&stop_flag),
+                Arc::clone(stop_flag),
             ),
             None => build_transpositions_by_target_letter(
                 enigma,
@@ -70,7 +70,7 @@ pub(super) fn build_transpositions(
 pub(super) fn build_transpositions_by_target_letter_multithreaded<'b>(
     enigma: &'b mut Enigma,
     target_letter: char,
-    letter_indexes_with_corresponding_cipher_char: &Vec<(usize, char)>,
+    letter_indexes_with_corresponding_cipher_char: &[(usize, char)],
     stop_flag: Arc<AtomicBool>,
 ) -> Option<&'b HashMap<char, char>> {
     let mut last_letter_position = 0;
@@ -101,7 +101,7 @@ pub(super) fn build_transpositions_by_target_letter_multithreaded<'b>(
 pub(super) fn build_transpositions_by_target_letter<'b>(
     enigma: &'b mut Enigma,
     target_letter: char,
-    letter_indexes_with_corresponding_cipher_char: &Vec<(usize, char)>,
+    letter_indexes_with_corresponding_cipher_char: &[(usize, char)],
 ) -> Option<&'b HashMap<char, char>> {
     let mut last_letter_position = 0;
 

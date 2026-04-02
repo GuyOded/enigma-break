@@ -63,7 +63,7 @@ impl EnigmaRotorConfiguration {
         middle_rotor_position: usize,
         right_rotor_position: usize,
     ) -> Self {
-        let _ = match (left_rotor_index, middle_rotor_index, right_rotor_index) {
+        match (left_rotor_index, middle_rotor_index, right_rotor_index) {
             (left, _, _) if left > 4 => panic!("Left rotor not in range, left={left}"),
             (_, middle, _) if middle > 4 => {
                 panic!("Middle rotor not in range, middle={middle}")
@@ -73,7 +73,7 @@ impl EnigmaRotorConfiguration {
             }
             _ => (),
         };
-        let _ = match (
+        match (
             left_rotor_position,
             middle_rotor_position,
             right_rotor_position,
