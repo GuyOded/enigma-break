@@ -76,10 +76,6 @@ pub(super) fn build_transpositions_by_target_letter_multithreaded<'b>(
     let mut last_letter_position = 0;
 
     for &(position, cipher_char) in letter_indexes_with_corresponding_cipher_char.iter() {
-        if stop_flag.load(Ordering::Relaxed) {
-            return None;
-        }
-
         match increment_enigma_and_transpose_new_letter(
             position,
             last_letter_position,
@@ -138,12 +134,9 @@ fn increment_enigma_and_transpose_new_letter(
     let untransposed_result = enigma.encrypt_char(target_letter).unwrap();
 
     if untransposed_result != corresponding_cipher_char {
-        if enigma
-            .get_transpositions()
-            .contains_key(&untransposed_result)
-            || enigma
-                .get_transpositions()
-                .contains_key(&corresponding_cipher_char)
+        let transpositions = enigma.get_transpositions();
+        if transpositions.contains_key(&untransposed_result)
+            || transpositions.contains_key(&corresponding_cipher_char)
         {
             trace!(
                 "d={untransposed_result}, c={corresponding_cipher_char}, i={position}, {:#?}",
