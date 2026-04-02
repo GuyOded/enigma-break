@@ -23,7 +23,10 @@ pub struct TestArgs {
     #[arg(long, short, default_value = None)]
     /// Test solver with an easy to solve cipher data so solution can be built quickly. Mutually exclusive together with hard.
     pub easy: Option<bool>,
-    /// Test solver with hard to solve cipher data, solution will take time to be built. Mutually exclusive together with easy.
     #[arg(long, default_value_t = false)]
+    /// Test solver with hard to solve cipher data, solution will take time to be built. Mutually exclusive together with easy.
     pub hard: bool,
+    #[arg(short, long, default_value_t = false)]
+    /// When set, run multithreaded solver (set by default)
+    pub single_threaded: bool,
 }
