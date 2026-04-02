@@ -22,7 +22,7 @@ pub(super) fn build_transpositions(
     enigma: &mut Enigma,
     enigma_rotor_configuration: &EnigmaRotorConfiguration,
     cipher_metadata: MetadataEnum,
-    stop_flag: Option<Arc<AtomicBool>>,
+    stop_flag: Option<&Arc<AtomicBool>>,
 ) -> Option<HashMap<char, char>> {
     let (most_frequent_plain_char, letter_positions_in_plain) = match cipher_metadata {
         MetadataEnum::ArcMetadata(cipher_metadata) => (
@@ -47,7 +47,7 @@ pub(super) fn build_transpositions(
                 enigma,
                 most_frequent_plain_char,
                 letter_positions_in_plain,
-                Arc::clone(stop_flag),
+                stop_flag,
             ),
             None => build_transpositions_by_target_letter(
                 enigma,
@@ -71,7 +71,7 @@ pub(super) fn build_transpositions_by_target_letter_multithreaded<'b>(
     enigma: &'b mut Enigma,
     target_letter: char,
     letter_indexes_with_corresponding_cipher_char: &[(usize, char)],
-    stop_flag: Arc<AtomicBool>,
+    stop_flag: &Arc<AtomicBool>,
 ) -> Option<&'b HashMap<char, char>> {
     let mut last_letter_position = 0;
 

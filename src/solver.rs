@@ -239,19 +239,13 @@ impl MultiThreadedEnigmaSolver {
                     let transpositions = enigma_solver_utils::build_transpositions(
                         &mut enigma,
                         &currently_tested_config,
-                        enigma_solver_utils::MetadataEnum::ArcMetadata(&Arc::clone(
-                            &cipher_metadata_clone,
-                        )),
-                        Some(Arc::clone(&stop_flag)),
+                        enigma_solver_utils::MetadataEnum::ArcMetadata(&cipher_metadata_clone),
+                        Some(&stop_flag),
                     );
 
                     if let Some(transpositions) = transpositions {
                         let mut data = solution_config.lock().unwrap();
-                        *data = Some((
-                            currently_tested_config,
-                            transpositions,
-                            Arc::clone(&reflector_arc),
-                        ));
+                        *data = Some((currently_tested_config, transpositions, reflector_arc));
                         return;
                     }
 
