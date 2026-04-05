@@ -6,10 +6,10 @@ use log::{LevelFilter, error};
 use solver::MultiThreadedEnigmaSolver;
 
 use crate::{
-    commands::{Cli, TestArgs},
+    cli::{Cli, TestArgs},
     solver::EnigmaSolver,
 };
-mod commands;
+mod cli;
 
 fn main() {
     let mut builder = default_builder();
@@ -21,7 +21,13 @@ fn main() {
     builder.init();
 
     match cli.command {
-        commands::Commands::Test(test_args) => run_test(test_args),
+        cli::Commands::Test(test_args) => run_test(test_args),
+        cli::Commands::Solve {
+            cipher_text,
+            plain_text,
+            settings_file,
+        } => todo!(),
+        cli::Commands::Encrypt { settings_file } => todo!(),
     }
 }
 

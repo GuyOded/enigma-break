@@ -17,7 +17,7 @@ mod enigma_solver_utils;
 use enigma_settings::{EnigmaRotorConfiguration, EnigmaSettings};
 use threadpool::ThreadPool;
 
-mod enigma_settings;
+pub mod enigma_settings;
 #[cfg(test)]
 mod tests;
 

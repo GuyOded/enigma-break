@@ -1,4 +1,8 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand, arg};
+
+use crate::solver::enigma_settings::EnigmaSettings;
 
 /// A program to break Enigma cipher
 #[derive(Parser, Debug)]
@@ -16,6 +20,24 @@ pub struct Cli {
 pub enum Commands {
     /// Tests enigma solver using example cipher and plain data
     Test(TestArgs),
+    /// Solve enigma given cipher text and partial plain text by finding configuration used for encryption.
+    Solve {
+        /// Path to file containing cipher text
+        cipher_text: PathBuf,
+        /// Path to file containing plain text associated with cipher text
+        plain_text: PathBuf,
+        /// Save results to a RON file
+        #[arg(short = 's', long)]
+        settings_file: Option<PathBuf>,
+    },
+    /// Encrypt/Decrypt
+    #[command(alias = "decrypt")]
+    Encrypt {
+        /// Optional RON settings file to set an enigma before encrypting
+        #[arg(short = 's', long)]
+        settings_file: Option<PathBuf>,
+        // settings: Option<EnigmaSettings>,
+    },
 }
 
 #[derive(Args, Debug)]

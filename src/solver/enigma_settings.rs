@@ -15,7 +15,7 @@ pub struct EnigmaRotorConfiguration {
     pub right_rotor_position: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnigmaSettings {
     pub rotor_config: EnigmaRotorConfiguration,
     pub transpositions: HashMap<char, char>,
@@ -25,9 +25,9 @@ pub struct EnigmaSettings {
 impl From<EnigmaSettings> for Enigma {
     fn from(value: EnigmaSettings) -> Self {
         let mut enigma = Enigma::new(
-            rotor_from_index(value.rotor_config.left_rotor_index),
-            rotor_from_index(value.rotor_config.middle_rotor_index),
-            rotor_from_index(value.rotor_config.right_rotor_index),
+            rotor_from_index(value.rotor_config.left_rotor_index - 1),
+            rotor_from_index(value.rotor_config.middle_rotor_index - 1),
+            rotor_from_index(value.rotor_config.right_rotor_index - 1),
             value.reflector,
         );
 
@@ -64,14 +64,11 @@ impl EnigmaRotorConfiguration {
         right_rotor_position: usize,
     ) -> Self {
         match (left_rotor_index, middle_rotor_index, right_rotor_index) {
-            (left, _, _) if left > 4 => panic!("Left rotor not in range, left={left}"),
-            (_, middle, _) if middle > 4 => {
-                panic!("Middle rotor not in range, middle={middle}")
-            }
-            (_, _, right) if right > 4 => {
-                panic!("Right rotor not in range, right={right}")
-            }
-            _ => (),
+            (0..4, 0..4, 0..4) => (),
+            _ => panic!(
+                "Rotors indices must be in the range 1-5, (left, middle, right)={:?}",
+                (left_rotor_index, middle_rotor_index, right_rotor_index)
+            ),
         };
         match (
             left_rotor_position,
@@ -91,9 +88,9 @@ impl EnigmaRotorConfiguration {
         };
 
         Self {
-            left_rotor_index,
-            middle_rotor_index,
-            right_rotor_index,
+            left_rotor_index: left_rotor_index + 1,
+            middle_rotor_index: middle_rotor_index + 1,
+            right_rotor_index: right_rotor_index + 1,
             left_rotor_position,
             middle_rotor_position,
             right_rotor_position,
