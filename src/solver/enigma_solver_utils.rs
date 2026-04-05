@@ -43,7 +43,7 @@ pub(super) fn build_transpositions(
         enigma.set_right_rotor_position_from_int(enigma_rotor_configuration.right_rotor_position);
         enigma.set_transposition(most_frequent_plain_char, transposition_candidate);
         let transpositions_result_for_target_letter = match stop_flag {
-            Some(ref stop_flag) => build_transpositions_by_target_letter_multithreaded(
+            Some(stop_flag) => build_transpositions_by_target_letter_multithreaded(
                 enigma,
                 most_frequent_plain_char,
                 letter_positions_in_plain,

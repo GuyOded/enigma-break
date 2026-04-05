@@ -38,9 +38,13 @@ pub fn solve(args: SolveArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{:#?}", solution);
     if let Some(path) = args.result_settings_file {
-        let mut f = OpenOptions::new().write(true).create(true).open(path)?;
-        f.write(
-            &(ron::ser::to_string_pretty(&solution, ron::ser::PrettyConfig::default())?.as_bytes()),
+        let mut f = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)?;
+        f.write_all(
+            ron::ser::to_string_pretty(&solution, ron::ser::PrettyConfig::default())?.as_bytes(),
         )?;
     }
 
