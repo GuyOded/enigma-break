@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand, arg};
 
@@ -33,11 +33,17 @@ pub enum Commands {
     /// Encrypt/Decrypt
     #[command(alias = "decrypt")]
     Encrypt {
-        /// Optional RON settings file to set an enigma before encrypting
+        /// RON/JSON settings file to set an enigma before encrypting
         #[arg(short = 's', long)]
         settings_file: Option<PathBuf>,
-        // settings: Option<EnigmaSettings>,
+        /// Ron/JSON settings from argument
+        #[arg(long, value_parser=parse_settings)]
+        settings: Option<EnigmaSettings>,
     },
+}
+
+fn parse_settings(s: &str) -> Result<EnigmaSettings, Box<dyn Error + Send + Sync>> {
+    s.parse()
 }
 
 #[derive(Args, Debug)]

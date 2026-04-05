@@ -79,13 +79,13 @@ impl EnigmaSolver {
                     self.find_enigma_configuration(combination, reflector)
                 {
                     debug!(
-                        "{:#?}, transpositions: {:#?}, reflector: {}",
-                        rotor_config, transpositions, reflector.name
+                        "{:#?}, transpositions: {:#?}, reflector: {:?}",
+                        rotor_config, transpositions, reflector.typ
                     );
                     return Some(EnigmaSettings {
                         rotor_config,
                         transpositions,
-                        reflector: *reflector,
+                        reflector_type: (*reflector).into(),
                     });
                 }
             }
@@ -134,8 +134,8 @@ impl EnigmaSolver {
 
                 if i % 2000 == 0 {
                     debug!(
-                        "Testing current config: {currently_tested_config:#?}, reflector: {}",
-                        reflector.name
+                        "Testing current config: {currently_tested_config:#?}, reflector: {:?}",
+                        reflector.typ
                     );
                 }
             }
@@ -182,13 +182,13 @@ impl MultiThreadedEnigmaSolver {
         let data = self.solution.lock().unwrap();
         if let Some((rotor_config, transpositions, reflector)) = (*data).clone() {
             debug!(
-                "{:#?}, transpositions: {:#?}, reflector: {}",
-                rotor_config, transpositions, reflector.name
+                "{:#?}, transpositions: {:#?}, reflector: {:?}",
+                rotor_config, transpositions, reflector.typ
             );
             return Some(EnigmaSettings {
                 rotor_config,
                 transpositions,
-                reflector: (*reflector),
+                reflector_type: (*reflector).into(),
             });
         }
 
@@ -197,7 +197,7 @@ impl MultiThreadedEnigmaSolver {
 
     fn find_enigma_configuration(&self, combination: &[usize; 3], reflector: &Reflector) {
         let cipher_metadata = Arc::new(self.cipher_metadata.clone());
-        let reflector_name = reflector.name;
+        let reflector_type = reflector.typ;
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
@@ -251,8 +251,8 @@ impl MultiThreadedEnigmaSolver {
 
                     if i % 2000 == 0 {
                         debug!(
-                            "Testing current config: {currently_tested_config:#?}, reflector: {}",
-                            reflector_name
+                            "Testing current config: {currently_tested_config:#?}, reflector: {:?}",
+                            reflector_type
                         );
                     }
                 }

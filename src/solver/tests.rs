@@ -1,4 +1,4 @@
-use crate::solver::enigma_settings::EnigmaRotorConfiguration;
+use crate::solver::enigma_settings::{EnigmaRotorConfiguration, ReflectorType};
 
 use super::MultiThreadedEnigmaSolver;
 
@@ -10,7 +10,7 @@ fn test_known_plain_text_solver_1() {
     let solver = MultiThreadedEnigmaSolver::new(cipher, plain_part);
     let settings = solver.solve().unwrap();
 
-    assert_eq!(settings.reflector.name, "Reflector A");
+    assert_eq!(settings.reflector_type, ReflectorType::ReflectorA);
 
     assert_eq!(
         settings.rotor_config,

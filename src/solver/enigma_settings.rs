@@ -1,11 +1,16 @@
 use std::collections::HashMap;
+use std::error::Error;
+use std::str::FromStr;
 
-use enigma::rotors;
-use enigma::{Enigma, reflectors::Reflector, rotor::Rotor};
+use enigma::{
+    Enigma, reflectors::Reflector, reflectors::ReflectorType as OuterReflectorType, rotor::Rotor,
+};
+use enigma::{reflectors, rotors};
+use serde::{Deserialize, Serialize};
 
 use crate::solver::ALPHABET_SIZE;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct EnigmaRotorConfiguration {
     pub left_rotor_index: usize,
     pub middle_rotor_index: usize,
@@ -15,11 +20,50 @@ pub struct EnigmaRotorConfiguration {
     pub right_rotor_position: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Deserialize, Serialize)]
+pub enum ReflectorType {
+    ReflectorA,
+    ReflectorB,
+    ReflectorC,
+}
+
+impl From<ReflectorType> for Reflector {
+    fn from(value: ReflectorType) -> Self {
+        match value {
+            ReflectorType::ReflectorA => reflectors::create_reflector_a(),
+            ReflectorType::ReflectorB => reflectors::create_reflector_b(),
+            ReflectorType::ReflectorC => reflectors::create_reflector_c(),
+        }
+    }
+}
+
+impl From<Reflector> for ReflectorType {
+    fn from(value: Reflector) -> Self {
+        match value.typ {
+            OuterReflectorType::ReflectorA => ReflectorType::ReflectorA,
+            OuterReflectorType::ReflectorB => ReflectorType::ReflectorB,
+            OuterReflectorType::ReflectorC => ReflectorType::ReflectorC,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EnigmaSettings {
     pub rotor_config: EnigmaRotorConfiguration,
     pub transpositions: HashMap<char, char>,
-    pub reflector: Reflector,
+    pub reflector_type: ReflectorType,
+}
+
+impl FromStr for EnigmaSettings {
+    type Err = Box<dyn Error + Send + Sync>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.trim_start().starts_with("{") {
+            Ok(serde_json::from_str(s)?)
+        } else {
+            Ok(ron::from_str(s)?)
+        }
+    }
 }
 
 impl From<EnigmaSettings> for Enigma {
@@ -28,7 +72,7 @@ impl From<EnigmaSettings> for Enigma {
             rotor_from_index(value.rotor_config.left_rotor_index - 1),
             rotor_from_index(value.rotor_config.middle_rotor_index - 1),
             rotor_from_index(value.rotor_config.right_rotor_index - 1),
-            value.reflector,
+            value.reflector_type.into(),
         );
 
         enigma.set_left_rotor_position_from_int(value.rotor_config.left_rotor_position);

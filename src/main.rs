@@ -23,6 +23,9 @@ fn main() {
             plain_text,
             settings_file,
         } => todo!(),
-        cli::Commands::Encrypt { settings_file } => todo!(),
+        cli::Commands::Encrypt {
+            settings_file,
+            settings,
+        } => todo!(),
     }
 }
