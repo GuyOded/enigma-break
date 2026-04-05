@@ -15,6 +15,7 @@ mod consts;
 mod enigma_solver_utils;
 
 use enigma_settings::{EnigmaRotorConfiguration, EnigmaSettings};
+use thiserror::Error;
 use threadpool::ThreadPool;
 
 pub mod enigma_settings;
@@ -24,6 +25,12 @@ mod tests;
 #[derive(Debug, Clone)]
 struct CipherMetadata {
     letter_positions: Vec<(char, Vec<(usize, char)>)>,
+}
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Unable to find solution")]
+    Unsolved,
 }
 
 const ALPHABET_SIZE: usize = 26;
@@ -72,7 +79,7 @@ impl EnigmaSolver {
         }
     }
 
-    pub fn solve(&self) -> Option<EnigmaSettings> {
+    pub fn solve(&self) -> Result<EnigmaSettings, Error> {
         for reflector in self.available_reflectors.iter() {
             for combination in consts::FIVE_CHOOSE_THREE_COMBINATIONS.iter() {
                 if let Some((rotor_config, transpositions)) =
@@ -82,7 +89,7 @@ impl EnigmaSolver {
                         "{:#?}, transpositions: {:#?}, reflector: {:?}",
                         rotor_config, transpositions, reflector.typ
                     );
-                    return Some(EnigmaSettings {
+                    return Ok(EnigmaSettings {
                         rotor_config,
                         transpositions,
                         reflector_type: (*reflector).into(),
@@ -91,7 +98,7 @@ impl EnigmaSolver {
             }
         }
 
-        None
+        Err(Error::Unsolved)
     }
 
     fn find_enigma_configuration(
@@ -170,7 +177,7 @@ impl MultiThreadedEnigmaSolver {
         }
     }
 
-    pub fn solve(&self) -> Option<EnigmaSettings> {
+    pub fn solve(&self) -> Result<EnigmaSettings, Error> {
         for reflector in self.available_reflectors.iter() {
             for combination in consts::FIVE_CHOOSE_THREE_COMBINATIONS.iter() {
                 self.find_enigma_configuration(combination, reflector);
@@ -185,14 +192,14 @@ impl MultiThreadedEnigmaSolver {
                 "{:#?}, transpositions: {:#?}, reflector: {:?}",
                 rotor_config, transpositions, reflector.typ
             );
-            return Some(EnigmaSettings {
+            return Ok(EnigmaSettings {
                 rotor_config,
                 transpositions,
                 reflector_type: (*reflector).into(),
             });
         }
 
-        None
+        Err(Error::Unsolved)
     }
 
     fn find_enigma_configuration(&self, combination: &[usize; 3], reflector: &Reflector) {

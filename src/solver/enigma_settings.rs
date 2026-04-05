@@ -108,7 +108,7 @@ impl EnigmaRotorConfiguration {
         right_rotor_position: usize,
     ) -> Self {
         match (left_rotor_index, middle_rotor_index, right_rotor_index) {
-            (0..4, 0..4, 0..4) => (),
+            (0..=4, 0..=4, 0..=4) => (),
             _ => panic!(
                 "Rotors indices must be in the range 1-5, (left, middle, right)={:?}",
                 (left_rotor_index, middle_rotor_index, right_rotor_index)

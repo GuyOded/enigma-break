@@ -1,4 +1,6 @@
 mod solver;
+use std::error::Error;
+
 use clap::Parser;
 use colog::default_builder;
 use log::LevelFilter;
@@ -7,7 +9,7 @@ use crate::cli::Cli;
 mod cli;
 mod commands;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let mut builder = default_builder();
     let cli = Cli::parse();
     if cli.debug {
@@ -18,14 +20,7 @@ fn main() {
 
     match cli.command {
         cli::Commands::Test(test_args) => commands::run_test(test_args),
-        cli::Commands::Solve {
-            cipher_text,
-            plain_text,
-            settings_file,
-        } => todo!(),
-        cli::Commands::Encrypt {
-            settings_file,
-            settings,
-        } => todo!(),
+        cli::Commands::Solve(args) => commands::solve(args),
+        cli::Commands::Encrypt(args) => todo!(),
     }
 }
