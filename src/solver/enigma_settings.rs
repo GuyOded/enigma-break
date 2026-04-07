@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::str::FromStr;
 
 use enigma::{
@@ -55,7 +54,7 @@ pub struct EnigmaSettings {
 }
 
 impl FromStr for EnigmaSettings {
-    type Err = Box<dyn Error + Send + Sync>;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.trim_start().starts_with("{") {

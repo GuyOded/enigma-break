@@ -1,5 +1,5 @@
 mod solver;
-use std::error::Error;
+use anyhow::Result;
 
 use clap::Parser;
 use colog::default_builder;
@@ -9,7 +9,7 @@ use crate::cli::Cli;
 mod cli;
 mod commands;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let mut builder = default_builder();
     let cli = Cli::parse();
     if cli.debug {
@@ -21,6 +21,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     match cli.command {
         cli::Commands::Test(test_args) => commands::run_test(test_args),
         cli::Commands::Solve(args) => commands::solve(args),
-        cli::Commands::Encrypt(args) => todo!(),
+        cli::Commands::Encrypt(args) => commands::encrypt(args),
     }
 }

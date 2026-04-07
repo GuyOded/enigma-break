@@ -1,4 +1,5 @@
-use std::{error::Error, path::PathBuf};
+use anyhow::Result;
+use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, arg};
 
@@ -27,7 +28,7 @@ pub enum Commands {
     Encrypt(EncryptArgs),
 }
 
-fn parse_settings(s: &str) -> Result<EnigmaSettings, Box<dyn Error + Send + Sync>> {
+fn parse_settings(s: &str) -> Result<EnigmaSettings> {
     s.parse()
 }
 
@@ -66,4 +67,7 @@ pub struct EncryptArgs {
     /// Ron/JSON settings from argument
     #[arg(long, value_parser=parse_settings)]
     pub settings: Option<EnigmaSettings>,
+    /// Path to file containing plain/cipher text to be encrypted/decrypted
+    #[arg(alias = "cipher")]
+    pub plain: PathBuf,
 }
